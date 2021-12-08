@@ -1,0 +1,16 @@
+[package]
+name = "tafrah-math"
+version = "0.1.0"
+authors = ["Nurkholish Halim <nh@perkamindo.org>"]
+edition = "2021"
+description = "Math primitives for the Tafrah PQC library (NTT, polynomial ring, modular arithmetic)"
+
+[features]
+default = ["std"]
+std = ["alloc"]
+alloc = []
+
+[dependencies]
+tafrah-traits = { workspace = true }
+sha3 = { workspace = true }
+subtle = { workspace = true }
