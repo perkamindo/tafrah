@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.1.0-rc.1 - 2026-03-11
+All notable changes to Tafrah are documented in this file.
+
+## [0.1.0] - 2026-03-12
+
+### Highlights
+
+- First tagged workspace release of Tafrah as a Rust-native post-quantum cryptography library covering FIPS 203, 204, 205, 206, and 207.
+- Native Rust implementations are available for ML-KEM, ML-DSA, SLH-DSA, Falcon, and HQC, with `no_std`-friendly core crates.
+- The repository now ships an installable `tafrah-abi` layer, a UniFFI integration path, and beginner-oriented implementation examples for Python, C++, Go, Java, Kotlin, JavaScript, and Rust.
 
 ### Added
 
@@ -8,34 +16,37 @@
 - Default-on ML-DSA oracle verification against `dilithium-master/ref` for ML-DSA-44, ML-DSA-65, and ML-DSA-87.
 - Current-reference SLH-DSA deterministic parity against `sphincsplus-master/ref` for all 12 standard parameter sets at `count=0`, plus a deeper selected-count audit.
 - Full all-count HQC reference reconstruction and decapsulation coverage for HQC-128, HQC-192, and HQC-256.
-- Additional negative-path regression tests for SLH-DSA, Falcon, and HQC parameter validation.
-- Validation summary in `VALIDATION.md`.
-- Multi-language examples in `examples/auth-demo` for Python, C++, Java, Kotlin, Go, JS, and Rust.
-- Local install layout for `tafrah-abi`, including `include/tafrah/`, `tafrah.hpp`, and `pkg-config`.
+- Multi-language implementation examples in `examples/auth-demo`.
+- Root-level build, install, examples, and coverage entry points through `make`.
+- GitHub Actions workflows for CI, coverage, and tagged release packaging.
 
 ### Changed
 
-- Generic parameter validation now exists across all core FIPS scheme crates:
-  - ML-KEM
-  - ML-DSA
-  - SLH-DSA
-  - Falcon
-  - HQC
-- SLH-DSA keygen and sign now return `Result`, matching the hardening direction already applied in ML-KEM and ML-DSA generic APIs.
-- Falcon remains pure Rust only; no C backend is present in the runtime crate.
-- CI now includes explicit reference-oracle coverage for the workspace.
+- Generic parameter validation now exists across the core scheme crates for ML-KEM, ML-DSA, SLH-DSA, Falcon, and HQC.
+- The public interoperability boundary is documented and shipped as `tafrah-abi`, while `tafrah_ffi.h` remains as a compatibility shim for existing consumers.
+- SLH-DSA key generation and signing now return `Result`, matching the hardened direction already applied in the generic ML-KEM and ML-DSA APIs.
+- Falcon remains pure Rust only; no C backend is part of the runtime crate.
 
 ### Fixed
 
-- Public signing and verification paths reject malformed serialized inputs more consistently instead of relying on unchecked slicing.
-- Several stale warning sources in debug and test code were removed.
-- Stale Falcon `vendor` reference directory had already been removed in the prior hardening pass and is no longer part of the crate.
-- `tafrah_abi.h` now defines the primary C ABI header, while `tafrah_ffi.h` remains as a compatibility shim for existing consumers.
-- Falcon signatures in the C ABI now use `sig_written` instead of forcing a fixed detached signature length.
+- Public signing, verification, encapsulation, and decapsulation paths reject malformed serialized inputs more consistently instead of relying on unchecked slicing.
+- Falcon signatures in the C ABI now report `sig_written` instead of forcing a fixed detached signature length.
+- Several stale warning sources in debug and test code were removed during the release hardening pass.
 
-### Validation Highlights
+### Verification
 
 - `cargo test` passes for the full workspace.
-- Falcon deterministic KAT parity passes for all local reference counts.
-- HQC all-count KAT reconstruction and decapsulation pass for all local reference counts.
-- ML-KEM, ML-DSA, and SLH-DSA pass current reference-oracle parity at the documented validation depth.
+- Reference-oracle coverage passes for ML-KEM, ML-DSA, SLH-DSA, Falcon, and HQC at the documented validation depth.
+- Cross-language examples build and run locally through `make examples`.
+- Tagged GitHub releases publish Linux and macOS install archives.
+
+## [0.0.0] - 2021-12-08
+
+### Added
+
+- Introduced `tafrah-math` as the original foundation layer for NTT, polynomial arithmetic, finite-field operations, sampling, matrix utilities, and compression helpers.
+- Established the first reusable math and encoding primitives that later became the base for the wider Tafrah workspace.
+
+### Changed
+
+- Organized the early math implementation into the dedicated `tafrah-math/` directory for clearer separation and future expansion.

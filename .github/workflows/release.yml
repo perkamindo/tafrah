@@ -79,11 +79,18 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           pattern: release-*
           merge-multiple: true
 
+      - name: render-release-notes
+        run: sh ./scripts/render-release-notes.sh "${GITHUB_REF_NAME}" "$RUNNER_TEMP/release-notes.md"
+
       - uses: softprops/action-gh-release@v2
         with:
+          name: Tafrah ${{ github.ref_name }}
+          body_path: ${{ runner.temp }}/release-notes.md
           files: tafrah-*.tar.gz
