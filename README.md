@@ -21,6 +21,7 @@ The repository is organized around three layers:
 - `tafrah-hqc/`: FIPS 207 HQC.
 - `tafrah-abi/`: installable C ABI and headers.
 - `tafrah-uniffi/`: UniFFI-facing wrapper crate.
+- `tafrah-math/`: shared finite-field, matrix, polynomial, and sampling primitives.
 - `tafrah-traits/`: shared traits and common error surface.
 - `examples/auth-demo/`: beginner-oriented cross-language implementation examples.
 - `docs/`: architecture, integration, and API documentation.

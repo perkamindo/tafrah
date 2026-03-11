@@ -22,7 +22,6 @@ This directory contains user-facing and technical documentation for the Tafrah w
 - [language-guides/js.md](language-guides/js.md)
 - [language-guides/rust.md](language-guides/rust.md)
 
-## Validation and Release Notes
+## Release Notes
 
-- [../VALIDATION.md](../VALIDATION.md)
 - [../CHANGELOG.md](../CHANGELOG.md)
