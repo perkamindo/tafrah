@@ -1,6 +1,6 @@
 # Tafrah
 
-Tafrah is a Rust-native post-quantum cryptography workspace covering FIPS `203`, `204`, `205`, `206`, and `207`.
+Tafrah is a Rust-native post-quantum cryptography workspace covering [FIPS `203`, `204`, and `205`](https://csrc.nist.gov/Projects/post-quantum-cryptography) together with [FIPS `206` and `207`](https://csrc.nist.gov/projects/post-quantum-cryptography/post-quantum-cryptography-standardization/selected-algorithms), which NIST lists as selected algorithms with `FIPS coming soon` status.
 
 The repository is organized around three layers:
 
@@ -8,7 +8,7 @@ The repository is organized around three layers:
 - An installable C ABI in `tafrah-abi` for language wrappers and systems integration.
 - UniFFI bindings and example wrappers for higher-level host integrations.
 
-## Workspace Layout
+## Library Layout
 
 - `tafrah/`: umbrella crate for Rust consumers.
 - `tafrah-ml-kem/`: FIPS 203 ML-KEM.
@@ -47,7 +47,6 @@ Common root targets:
 
 - [INSTALL.md](INSTALL.md)
 - [docs/README.md](docs/README.md)
-- [VALIDATION.md](VALIDATION.md)
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## Examples
