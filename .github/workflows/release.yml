@@ -93,4 +93,6 @@ jobs:
         with:
           name: Tafrah ${{ github.ref_name }}
           body_path: ${{ runner.temp }}/release-notes.md
+          generate_release_notes: true
+          append_body: true
           files: tafrah-*.tar.gz
