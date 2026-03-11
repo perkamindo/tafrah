@@ -1,0 +1,39 @@
+name: tafrah-coverage
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: install-llvm-tools
+        run: rustup component add llvm-tools-preview
+
+      - name: install-cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+
+      - name: run-coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p coverage
+          cargo llvm-cov --workspace --all-features --lcov --output-path coverage/lcov.info | tee coverage/summary.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage

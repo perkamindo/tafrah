@@ -4,7 +4,7 @@ PREFIX ?= $(CURDIR)/dist/install
 UNIFFI_LANGUAGE ?= python
 UNIFFI_OUT_DIR ?= $(CURDIR)/target/uniffi/$(UNIFFI_LANGUAGE)
 
-.PHONY: help test test-reference test-deep-slh build build-abi build-ffi build-uniffi install install-abi install-ffi examples demo-examples demo-python generate-uniffi
+.PHONY: help test test-reference test-deep-slh coverage build build-abi build-ffi build-uniffi install install-abi install-ffi examples demo-examples demo-python generate-uniffi
 
 help:
 	@printf '%s\n' \
@@ -12,6 +12,7 @@ help:
 		'  make test                 - run full workspace test suite' \
 		'  make test-reference       - run default reference oracle suite' \
 		'  make test-deep-slh        - run expensive current-reference SLH-DSA audit' \
+		'  make coverage             - run workspace coverage with cargo-llvm-cov' \
 		'  make build                - build workspace debug artifacts' \
 		'  make build-abi            - build release C ABI shared library' \
 		'  make build-uniffi         - build release UniFFI shared library' \
@@ -30,6 +31,11 @@ test-reference:
 
 test-deep-slh:
 	cargo test -p tafrah --test reference_kat test_reference_slh_dsa_sphincs_master_detkat_selected_deep_counts -- --ignored
+
+coverage:
+	@command -v cargo-llvm-cov >/dev/null 2>&1 || { echo "cargo-llvm-cov is required. Install it with: cargo install cargo-llvm-cov --locked"; exit 1; }
+	rustup component add llvm-tools-preview
+	cargo llvm-cov --workspace --all-features --html
 
 build:
 	cargo build

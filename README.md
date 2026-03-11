@@ -1,5 +1,8 @@
 # Tafrah
 
+[![CI](https://github.com/perkamindo/tafrah/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/perkamindo/tafrah/actions/workflows/ci.yml)
+[![Coverage](https://github.com/perkamindo/tafrah/actions/workflows/coverage.yml/badge.svg?branch=master)](https://github.com/perkamindo/tafrah/actions/workflows/coverage.yml)
+
 Tafrah is a Rust-native post-quantum cryptography workspace covering [FIPS `203`, `204`, and `205`](https://csrc.nist.gov/Projects/post-quantum-cryptography) together with [FIPS `206` and `207`](https://csrc.nist.gov/projects/post-quantum-cryptography/post-quantum-cryptography-standardization/selected-algorithms), which NIST lists as selected algorithms with `FIPS coming soon` status.
 
 The repository is organized around three layers:
@@ -35,6 +38,7 @@ Common root targets:
 - `make test`
 - `make test-reference`
 - `make test-deep-slh`
+- `make coverage`
 - `make build`
 - `make build-abi`
 - `make build-uniffi`
