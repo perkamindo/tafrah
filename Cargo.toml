@@ -14,6 +14,13 @@ members = [
     "uniffi-bindgen",
 ]
 
+[workspace.package]
+authors = ["oghie <oghie@perkamindo.org>"]
+license = "MIT"
+repository = "https://github.com/perkamindo/tafrah"
+homepage = "https://github.com/perkamindo/tafrah"
+readme = "README.md"
+
 [workspace.dependencies]
 sha2 = { version = "0.10", default-features = false }
 sha3 = { version = "0.10", default-features = false }
@@ -23,10 +30,10 @@ subtle = { version = "2", default-features = false }
 hmac = { version = "0.12", default-features = false }
 libm = { version = "0.2", default-features = false }
 
-tafrah-traits = { path = "tafrah-traits" }
-tafrah-math = { path = "tafrah-math" }
-tafrah-ml-kem = { path = "tafrah-ml-kem" }
-tafrah-ml-dsa = { path = "tafrah-ml-dsa" }
-tafrah-slh-dsa = { path = "tafrah-slh-dsa" }
-tafrah-falcon = { path = "tafrah-falcon" }
-tafrah-hqc = { path = "tafrah-hqc" }
+tafrah-traits = { version = "0.1.0", path = "tafrah-traits" }
+tafrah-math = { version = "0.1.0", path = "tafrah-math" }
+tafrah-ml-kem = { version = "0.1.0", path = "tafrah-ml-kem" }
+tafrah-ml-dsa = { version = "0.1.0", path = "tafrah-ml-dsa" }
+tafrah-slh-dsa = { version = "0.1.0", path = "tafrah-slh-dsa" }
+tafrah-falcon = { version = "0.1.0", path = "tafrah-falcon" }
+tafrah-hqc = { version = "0.1.0", path = "tafrah-hqc" }

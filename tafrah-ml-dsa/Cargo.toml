@@ -3,6 +3,11 @@ name = "tafrah-ml-dsa"
 version = "0.1.0"
 edition = "2021"
 description = "ML-DSA (FIPS 204) implementation for the Tafrah PQC library"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
 
 [features]
 default = ["std"]

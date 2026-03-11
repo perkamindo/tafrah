@@ -3,6 +3,11 @@ name = "tafrah-traits"
 version = "0.1.0"
 edition = "2021"
 description = "Shared traits and error types for the Tafrah PQC library"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
 
 [features]
 default = ["std"]

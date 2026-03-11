@@ -3,6 +3,11 @@ name = "tafrah-abi"
 version = "0.1.0"
 edition = "2021"
 description = "C ABI layer for Tafrah PQC primitives"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
