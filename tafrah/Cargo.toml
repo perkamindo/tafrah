@@ -1,0 +1,28 @@
+[package]
+name = "tafrah"
+version = "0.1.0"
+edition = "2021"
+description = "Native Rust Post-Quantum Cryptography library"
+
+[features]
+default = ["std", "ml-kem", "ml-dsa", "slh-dsa"]
+std = ["alloc", "tafrah-traits/std"]
+alloc = ["tafrah-traits/alloc"]
+ml-kem = ["dep:tafrah-ml-kem"]
+ml-dsa = ["dep:tafrah-ml-dsa"]
+slh-dsa = ["dep:tafrah-slh-dsa"]
+falcon = ["dep:tafrah-falcon"]
+hqc = ["dep:tafrah-hqc"]
+
+[dependencies]
+tafrah-traits = { workspace = true }
+tafrah-ml-kem = { workspace = true, optional = true }
+tafrah-ml-dsa = { workspace = true, optional = true }
+tafrah-slh-dsa = { workspace = true, optional = true }
+tafrah-falcon = { workspace = true, optional = true }
+tafrah-hqc = { workspace = true, optional = true }
+
+[dev-dependencies]
+rand = "0.8"
+rand_core = { workspace = true }
+sha3 = { workspace = true }

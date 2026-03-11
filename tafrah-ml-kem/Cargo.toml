@@ -1,0 +1,21 @@
+[package]
+name = "tafrah-ml-kem"
+version = "0.1.0"
+edition = "2021"
+description = "ML-KEM (FIPS 203) implementation for the Tafrah PQC library"
+
+[features]
+default = ["std"]
+std = ["alloc", "tafrah-traits/std", "tafrah-math/std"]
+alloc = ["tafrah-traits/alloc", "tafrah-math/alloc"]
+
+[dependencies]
+tafrah-traits = { workspace = true }
+tafrah-math = { workspace = true }
+sha3 = { workspace = true }
+rand_core = { workspace = true }
+zeroize = { workspace = true }
+subtle = { workspace = true }
+
+[dev-dependencies]
+rand = "0.8"

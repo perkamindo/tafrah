@@ -1,0 +1,19 @@
+[package]
+name = "tafrah-hqc"
+version = "0.1.0"
+edition = "2021"
+description = "HQC (FIPS 207) scaffolding for the Tafrah PQC library"
+
+[features]
+default = ["std"]
+std = ["alloc", "tafrah-traits/std"]
+alloc = ["tafrah-traits/alloc"]
+
+[dependencies]
+tafrah-traits = { workspace = true }
+rand_core = { workspace = true }
+sha3 = { workspace = true }
+zeroize = { workspace = true }
+
+[dev-dependencies]
+rand = "0.8"

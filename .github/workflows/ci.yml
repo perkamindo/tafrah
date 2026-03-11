@@ -1,0 +1,117 @@
+name: tafrah-ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: test-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: make-test
+        run: make test
+
+  reference-oracles:
+    name: reference-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: reference-kat
+        run: make test-reference
+
+  native-artifacts:
+    name: native-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            abi_lib: libtafrah_abi.so
+            uniffi_lib: libtafrah_uniffi.so
+          - os: macos-latest
+            abi_lib: libtafrah_abi.dylib
+            uniffi_lib: libtafrah_uniffi.dylib
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: build-release-libs
+        run: |
+          make build-abi
+          make build-uniffi
+
+      - name: install-abi-layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          make install PREFIX="$PWD/dist/install"
+          test -f "dist/install/lib/${{ matrix.abi_lib }}"
+          cp "target/release/${{ matrix.uniffi_lib }}" "dist/install/lib/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.os }}
+          path: dist/install
+
+  uniffi-bindings:
+    name: bindings-${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: python
+            os: ubuntu-latest
+            language: python
+          - name: kotlin
+            os: ubuntu-latest
+            language: kotlin
+          - name: swift
+            os: macos-latest
+            language: swift
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: generate-bindings
+        run: |
+          make build-uniffi
+          make generate-uniffi UNIFFI_LANGUAGE=${{ matrix.language }} UNIFFI_OUT_DIR="$PWD/target/uniffi/${{ matrix.language }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uniffi-${{ matrix.name }}
+          path: target/uniffi/${{ matrix.language }}

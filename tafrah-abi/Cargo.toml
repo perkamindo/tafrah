@@ -1,0 +1,17 @@
+[package]
+name = "tafrah-abi"
+version = "0.1.0"
+edition = "2021"
+description = "C ABI layer for Tafrah PQC primitives"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rand = "0.8"
+tafrah-falcon = { workspace = true }
+tafrah-hqc = { workspace = true }
+tafrah-ml-kem = { workspace = true }
+tafrah-ml-dsa = { workspace = true }
+tafrah-slh-dsa = { workspace = true }
+tafrah-traits = { workspace = true, features = ["std"] }

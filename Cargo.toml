@@ -1,0 +1,32 @@
+[workspace]
+resolver = "2"
+members = [
+    "tafrah",
+    "tafrah-abi",
+    "tafrah-uniffi",
+    "tafrah-traits",
+    "tafrah-math",
+    "tafrah-ml-kem",
+    "tafrah-ml-dsa",
+    "tafrah-slh-dsa",
+    "tafrah-falcon",
+    "tafrah-hqc",
+    "uniffi-bindgen",
+]
+
+[workspace.dependencies]
+sha2 = { version = "0.10", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+rand_core = { version = "0.6", default-features = false }
+zeroize = { version = "1", default-features = false, features = ["derive"] }
+subtle = { version = "2", default-features = false }
+hmac = { version = "0.12", default-features = false }
+libm = { version = "0.2", default-features = false }
+
+tafrah-traits = { path = "tafrah-traits" }
+tafrah-math = { path = "tafrah-math" }
+tafrah-ml-kem = { path = "tafrah-ml-kem" }
+tafrah-ml-dsa = { path = "tafrah-ml-dsa" }
+tafrah-slh-dsa = { path = "tafrah-slh-dsa" }
+tafrah-falcon = { path = "tafrah-falcon" }
+tafrah-hqc = { path = "tafrah-hqc" }

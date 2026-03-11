@@ -1,0 +1,7 @@
+/.DS_Store
+/target/
+
+/examples/auth-demo/artifacts/
+/examples/auth-demo/build/
+/examples/auth-demo/results/
+/examples/auth-demo/__pycache__/

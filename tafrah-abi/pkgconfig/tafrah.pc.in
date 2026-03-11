@@ -1,0 +1,9 @@
+prefix=@PREFIX@
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: tafrah
+Description: Tafrah native Rust PQC C ABI
+Version: @VERSION@
+Libs: -L${libdir} -ltafrah_abi
+Cflags: -I${includedir}

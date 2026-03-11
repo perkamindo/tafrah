@@ -1,0 +1,10 @@
+[package]
+name = "tafrah-rust-demo"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+rand = "0.8"
+tafrah = { path = "../../../tafrah", features = ["std", "ml-kem", "ml-dsa", "slh-dsa", "falcon", "hqc"] }

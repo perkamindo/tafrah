@@ -1,0 +1,20 @@
+[package]
+name = "tafrah-falcon"
+version = "0.1.0"
+edition = "2021"
+description = "Falcon (FIPS 206) scaffolding for the Tafrah PQC library"
+
+[features]
+default = ["std"]
+std = ["alloc", "tafrah-traits/std"]
+alloc = ["tafrah-traits/alloc"]
+
+[dependencies]
+tafrah-traits = { workspace = true }
+rand_core = { workspace = true }
+sha3 = { workspace = true }
+zeroize = { workspace = true }
+libm = { workspace = true }
+
+[dev-dependencies]
+rand = "0.8"
