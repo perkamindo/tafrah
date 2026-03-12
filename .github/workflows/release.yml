@@ -26,7 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: setup-rust
+        run: sh ./scripts/setup-rust.sh
 
       - name: make-test
         run: make test
@@ -51,7 +52,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: setup-rust
+        run: sh ./scripts/setup-rust.sh
 
       - name: build-release-libs
         run: |
