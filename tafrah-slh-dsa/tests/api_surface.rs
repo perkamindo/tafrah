@@ -78,8 +78,8 @@ fn test_slh_keygen_internal_matches_rng_wrapper() {
     )
     .unwrap();
 
-    assert_eq!(vk_rng.bytes, vk_det.bytes);
-    assert_eq!(sk_rng.bytes, sk_det.bytes);
+    assert_eq!(vk_rng.as_bytes(), vk_det.as_bytes());
+    assert_eq!(sk_rng.as_bytes(), sk_det.as_bytes());
 }
 
 #[test]
@@ -87,7 +87,7 @@ fn test_slh_internal_deterministic_and_randomized_modes() {
     let params = SLH_DSA_SHAKE_128F;
     let (vk, sk) = fixed_keypair(&params);
     let msg = b"SLH-DSA internal deterministic mode";
-    let pk_seed = &sk.bytes[2 * params.n..3 * params.n];
+    let pk_seed = &sk.as_bytes()[2 * params.n..3 * params.n];
     let addrnd = vec![0xA5; params.n];
 
     let sig_deterministic_a = slh_sign_internal(&sk, msg, None, &params).unwrap();
@@ -95,9 +95,12 @@ fn test_slh_internal_deterministic_and_randomized_modes() {
     let sig_with_pk_seed = slh_sign_internal(&sk, msg, Some(pk_seed), &params).unwrap();
     let sig_randomized = slh_sign_internal(&sk, msg, Some(&addrnd), &params).unwrap();
 
-    assert_eq!(sig_deterministic_a.bytes, sig_deterministic_b.bytes);
-    assert_eq!(sig_deterministic_a.bytes, sig_with_pk_seed.bytes);
-    assert_ne!(sig_deterministic_a.bytes, sig_randomized.bytes);
+    assert_eq!(
+        sig_deterministic_a.as_bytes(),
+        sig_deterministic_b.as_bytes()
+    );
+    assert_eq!(sig_deterministic_a.as_bytes(), sig_with_pk_seed.as_bytes());
+    assert_ne!(sig_deterministic_a.as_bytes(), sig_randomized.as_bytes());
 
     slh_verify_internal(&vk, msg, &sig_deterministic_a, &params).unwrap();
     slh_verify_internal(&vk, msg, &sig_randomized, &params).unwrap();
@@ -114,8 +117,8 @@ fn test_slh_pure_context_roundtrip_and_domain_separation() {
     let pure_sig_again = slh_sign(&sk, msg, ctx, None, &params).unwrap();
     let internal_sig = slh_sign_internal(&sk, msg, None, &params).unwrap();
 
-    assert_eq!(pure_sig.bytes, pure_sig_again.bytes);
-    assert_ne!(pure_sig.bytes, internal_sig.bytes);
+    assert_eq!(pure_sig.as_bytes(), pure_sig_again.as_bytes());
+    assert_ne!(pure_sig.as_bytes(), internal_sig.as_bytes());
 
     slh_verify(&vk, msg, &pure_sig, ctx, &params).unwrap();
     assert_eq!(

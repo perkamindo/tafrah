@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import json
 
 from tafrah import TafrahABI
@@ -30,8 +31,8 @@ def main() -> int:
     result = {
         "language": "python",
         "native_version": abi.version,
-        "ml_kem_768_shared_secret_match": client_ss == server_ss,
-        "hqc_128_shared_secret_match": hqc_client_ss == hqc_server_ss,
+        "ml_kem_768_shared_secret_match": hmac.compare_digest(client_ss, server_ss),
+        "hqc_128_shared_secret_match": hmac.compare_digest(hqc_client_ss, hqc_server_ss),
         "ml_dsa_65_verify_ok": abi.ml_dsa_65_verify(ml_vk, ml_msg, ml_sig),
         "ml_dsa_65_tamper_rejected": not abi.ml_dsa_65_verify(ml_vk, ml_msg + b"\x01", ml_sig),
         "slh_dsa_shake_128f_verify_ok": abi.slh_dsa_shake_128f_verify(slh_vk, slh_msg, slh_sig),

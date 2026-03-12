@@ -90,15 +90,8 @@ fn test_prehash_all_algorithms_roundtrip() {
         ml_dsa_verify_prehash(&vk, &digest, &sig, ctx, alg, &ML_DSA_44).unwrap();
 
         let (pre, prelen) = build_prehash_prefix(&digest, ctx, alg).unwrap();
-        let internal = ml_dsa_sign_prehash_internal(
-            &sk,
-            &digest,
-            ctx,
-            &zero_rnd(),
-            alg,
-            &ML_DSA_44,
-        )
-        .unwrap();
+        let internal =
+            ml_dsa_sign_prehash_internal(&sk, &digest, ctx, &zero_rnd(), alg, &ML_DSA_44).unwrap();
         assert_eq!(sig.as_bytes(), internal.as_bytes());
         ml_dsa_verify_internal(&vk, &pre[..prelen], &sig, &[], false, &ML_DSA_44).unwrap();
     }
@@ -111,8 +104,7 @@ fn test_shake256_prehash_convenience_matches_internal_digest_path() {
     let ctx = b"shake-ctx";
     let digest = shake256_prehash(msg);
 
-    let sig =
-        ml_dsa_sign_prehash_shake256_deterministic(&sk, msg, ctx, &ML_DSA_44).unwrap();
+    let sig = ml_dsa_sign_prehash_shake256_deterministic(&sk, msg, ctx, &ML_DSA_44).unwrap();
     let expected = ml_dsa_sign_prehash_deterministic(
         &sk,
         &digest,
@@ -132,8 +124,7 @@ fn test_signed_message_open_roundtrip() {
     let msg = b"tafrah::signed-message";
     let ctx = b"sm-ctx";
 
-    let signed =
-        ml_dsa_sign_message_deterministic_with_context(&sk, msg, ctx, &ML_DSA_44).unwrap();
+    let signed = ml_dsa_sign_message_deterministic_with_context(&sk, msg, ctx, &ML_DSA_44).unwrap();
     let opened = ml_dsa_open_signed_message_with_context(&vk, &signed, ctx, &ML_DSA_44).unwrap();
 
     assert_eq!(opened.as_slice(), msg);

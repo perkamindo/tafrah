@@ -92,6 +92,9 @@ impl Params {
 pub const Q: i32 = 8380417;
 
 /// FIPS 204 ML-DSA-44 parameter bundle.
+///
+/// In the final FIPS 204 standard this parameter set corresponds to NIST
+/// security category 1.
 pub const ML_DSA_44: Params = Params {
     k: 4,
     l: 4,

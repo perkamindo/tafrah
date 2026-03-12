@@ -32,11 +32,7 @@ pub mod kem {
     /// Conditional add q: if a < 0, add q
     #[inline(always)]
     pub fn caddq(a: i16) -> i16 {
-        if a < 0 {
-            a + Q
-        } else {
-            a
-        }
+        a + ((a >> 15) & Q)
     }
 
     /// Conditional subtract q: if a >= q, subtract q

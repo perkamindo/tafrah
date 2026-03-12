@@ -97,6 +97,37 @@ jobs:
           name: native-${{ matrix.id }}
           path: dist/install
 
+  simd-bench:
+    name: simd-bench-${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: avx2-linux-x64
+            os: ubuntu-latest
+            bench_features: avx2
+            artifact_name: simd-bench-avx2-linux-x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup-rust
+        shell: bash
+        run: bash ./scripts/setup-rust.sh
+
+      - name: run-simd-bench
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run -p tafrah-bench --release --features "${{ matrix.bench_features }}" -- --json > bench.json
+          cat bench.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: bench.json
+
   uniffi-bindings:
     name: bindings-${{ matrix.name }}
     runs-on: ${{ matrix.os }}

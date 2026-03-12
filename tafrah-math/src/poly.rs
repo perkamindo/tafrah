@@ -2,10 +2,11 @@
 pub mod kem {
     use crate::field::kem;
     use crate::ntt::kem as ntt;
+    use zeroize::Zeroize;
 
     pub const N: usize = 256;
 
-    #[derive(Clone)]
+    #[derive(Clone, Zeroize)]
     pub struct Poly {
         pub coeffs: [i16; N],
     }
@@ -82,10 +83,11 @@ pub mod kem {
 pub mod dsa {
     use crate::field::dsa;
     use crate::ntt::dsa as ntt;
+    use zeroize::Zeroize;
 
     pub const N: usize = 256;
 
-    #[derive(Clone)]
+    #[derive(Clone, Zeroize)]
     pub struct Poly {
         pub coeffs: [i32; N],
     }

@@ -55,12 +55,12 @@ fn test_dsa_debug_trace() {
     let mut rng = rand::rng();
 
     let (vk, sk) = ml_dsa_keygen(&mut rng, params).unwrap();
-    eprintln!("VK bytes: {}", vk.bytes.len());
-    eprintln!("SK bytes: {}", sk.bytes.len());
+    eprintln!("VK bytes: {}", vk.as_bytes().len());
+    eprintln!("SK bytes: {}", sk.as_bytes().len());
 
     let msg = b"test message";
     let sig = ml_dsa_sign(&sk, msg, &mut rng, params).unwrap();
-    eprintln!("Sig bytes: {}", sig.bytes.len());
+    eprintln!("Sig bytes: {}", sig.as_bytes().len());
 
     // Now manually verify step by step
     let k = params.k;
@@ -68,16 +68,16 @@ fn test_dsa_debug_trace() {
     let alpha = 2 * params.gamma2;
 
     // Parse VK
-    let rho = &vk.bytes[..32];
+    let rho = &vk.as_bytes()[..32];
     let t1_bytes = 320;
     let mut t1: Vec<Poly> = Vec::new();
     for i in 0..k {
         let start = 32 + i * t1_bytes;
-        t1.push(encode::unpack_t1(&vk.bytes[start..start + t1_bytes]));
+        t1.push(encode::unpack_t1(&vk.as_bytes()[start..start + t1_bytes]));
     }
 
     // Parse signature
-    let c_tilde = &sig.bytes[..params.c_tilde_bytes];
+    let c_tilde = &sig.as_bytes()[..params.c_tilde_bytes];
 
     let z_bytes = match params.gamma1_bits {
         17 => 576,
@@ -89,14 +89,14 @@ fn test_dsa_debug_trace() {
     let mut z: Vec<Poly> = Vec::new();
     for _ in 0..l {
         z.push(encode::unpack_z(
-            &sig.bytes[offset..offset + z_bytes],
+            &sig.as_bytes()[offset..offset + z_bytes],
             params.gamma1_bits,
         ));
         offset += z_bytes;
     }
 
-    let hint_vec =
-        encode::unpack_hint(&sig.bytes[offset..], k, params.omega).expect("hint unpack failed");
+    let hint_vec = encode::unpack_hint(&sig.as_bytes()[offset..], k, params.omega)
+        .expect("hint unpack failed");
 
     // Check z norm
     let z_bound = params.gamma1 - params.beta;
@@ -132,7 +132,7 @@ fn test_dsa_debug_trace() {
     use sha3::Shake256;
 
     let mut tr_hasher = Shake256::default();
-    sha3::digest::Update::update(&mut tr_hasher, &vk.bytes);
+    sha3::digest::Update::update(&mut tr_hasher, vk.as_bytes());
     let mut tr_reader = tr_hasher.finalize_xof();
     let mut tr = [0u8; 64];
     tr_reader.read(&mut tr);

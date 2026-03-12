@@ -4,7 +4,7 @@ PREFIX ?= $(CURDIR)/dist/install
 UNIFFI_LANGUAGE ?= python
 UNIFFI_OUT_DIR ?= $(CURDIR)/target/uniffi/$(UNIFFI_LANGUAGE)
 
-.PHONY: help test test-reference test-deep-slh test-deep-mldsa coverage build build-abi build-ffi build-uniffi install install-abi install-ffi examples demo-examples demo-python generate-uniffi
+.PHONY: help test test-reference test-deep-slh test-deep-mldsa coverage build build-abi build-ffi build-uniffi install install-abi install-ffi examples demo-examples demo-python generate-uniffi bench bench-json
 
 help:
 	@printf '%s\n' \
@@ -14,6 +14,8 @@ help:
 		'  make test-deep-slh        - run expensive FIPS 205 SPHINCS+ reference audit' \
 		'  make test-deep-mldsa      - run expensive FIPS 204 ML-DSA reference audit' \
 		'  make coverage             - run workspace coverage with cargo-llvm-cov' \
+		'  make bench                - run native benchmark suite in table form' \
+		'  make bench-json           - run native benchmark suite in JSON form' \
 		'  make build                - build workspace debug artifacts' \
 		'  make build-abi            - build release C ABI shared library' \
 		'  make build-uniffi         - build release UniFFI shared library' \
@@ -41,6 +43,24 @@ coverage:
 	@command -v cargo-llvm-cov >/dev/null 2>&1 || { echo "cargo-llvm-cov is required. Install it with: cargo install cargo-llvm-cov --locked"; exit 1; }
 	rustup component add llvm-tools-preview
 	cargo llvm-cov --workspace --all-features --html
+
+bench:
+	cargo run -p tafrah-bench --release
+
+bench-avx2:
+	cargo run -p tafrah-bench --release --features avx2
+
+bench-neon:
+	cargo run -p tafrah-bench --release --features neon
+
+bench-json:
+	cargo run -p tafrah-bench --release -- --json
+
+bench-avx2-json:
+	cargo run -p tafrah-bench --release --features avx2 -- --json
+
+bench-neon-json:
+	cargo run -p tafrah-bench --release --features neon -- --json
 
 build:
 	cargo build

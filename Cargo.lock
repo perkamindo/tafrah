@@ -143,9 +143,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.60"
+version = "4.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2797f34da339ce31042b27d23607e051786132987f595b02ba4f6a6dffb7030a"
+checksum = "b193af5b67834b676abd72466a96c1024e6a6ad978a1f484bd90b85c94041351"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -153,9 +153,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.60"
+version = "4.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24a241312cea5059b13574bb9b3861cabf758b879c15190b37b6d6fd63ab6876"
+checksum = "714a53001bf66416adb0e2ef5ac857140e7dc3a0c48fb28b2f10762fc4b5069f"
 dependencies = [
  "anstyle",
  "clap_lex",
@@ -164,9 +164,9 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-version = "4.5.55"
+version = "4.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a92793da1a46a5f2a02a6f4c46c6496b28c43638adea8306fcb0caa1634f24e5"
+checksum = "1110bd8a634a1ab8cb04345d8d878267d57c3cf1b38d91b71af6686408bbca6a"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -176,9 +176,9 @@ dependencies = [
 
 [[package]]
 name = "clap_lex"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a822ea5bc7590f9d40f1ba12c0dc3c2760f3482c6984db1573ad11031420831"
+checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
 name = "cpufeatures"
@@ -646,7 +646,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "rand",
  "rand_core",
@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-abi"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "rand",
  "tafrah-falcon",
@@ -673,8 +673,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tafrah-bench"
+version = "0.1.7"
+dependencies = [
+ "rand",
+ "tafrah",
+ "tafrah-math",
+]
+
+[[package]]
 name = "tafrah-falcon"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "libm",
  "rand",
@@ -686,7 +695,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-hqc"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "rand",
  "rand_core",
@@ -697,16 +706,17 @@ dependencies = [
 
 [[package]]
 name = "tafrah-math"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "sha3",
  "subtle",
  "tafrah-traits",
+ "zeroize",
 ]
 
 [[package]]
 name = "tafrah-ml-dsa"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "rand",
  "rand_core",
@@ -719,7 +729,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-ml-kem"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "rand",
  "rand_core",
@@ -732,7 +742,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-slh-dsa"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "hmac",
  "rand",
@@ -746,7 +756,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-traits"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "rand_core",
  "zeroize",
@@ -754,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-uniffi"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "rand",
  "tafrah-falcon",

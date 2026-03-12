@@ -22,3 +22,9 @@ pub mod matrix;
 pub mod ntt;
 pub mod poly;
 pub mod sampling;
+
+#[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+mod ntt_avx2;
+
+#[cfg(all(feature = "neon", target_arch = "aarch64"))]
+mod ntt_neon;

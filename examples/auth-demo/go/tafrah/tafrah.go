@@ -8,6 +8,7 @@ package tafrah
 import "C"
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"unsafe"
@@ -55,12 +56,23 @@ func asPtr(buf []byte) *C.uint8_t {
 	return (*C.uint8_t)(unsafe.Pointer(&buf[0]))
 }
 
+func constantTimeEqual(a, b []byte) bool {
+	return len(a) == len(b) && subtle.ConstantTimeCompare(a, b) == 1
+}
+
+func zeroBytes(buf []byte) {
+	clear(buf)
+}
+
 func RunProof() (ProofResult, error) {
 	kemEk := make([]byte, int(C.tafrah_ml_kem_768_ek_size()))
 	kemDk := make([]byte, int(C.tafrah_ml_kem_768_dk_size()))
 	kemCt := make([]byte, int(C.tafrah_ml_kem_768_ct_size()))
 	kemClientSS := make([]byte, int(C.tafrah_shared_secret_size()))
 	kemServerSS := make([]byte, int(C.tafrah_shared_secret_size()))
+	defer zeroBytes(kemDk)
+	defer zeroBytes(kemClientSS)
+	defer zeroBytes(kemServerSS)
 	if err := check(C.tafrah_ml_kem_768_keygen(asPtr(kemEk), C.size_t(len(kemEk)), asPtr(kemDk), C.size_t(len(kemDk))), "tafrah_ml_kem_768_keygen"); err != nil {
 		return ProofResult{}, err
 	}
@@ -76,6 +88,9 @@ func RunProof() (ProofResult, error) {
 	hqcCt := make([]byte, int(C.tafrah_hqc_128_ct_size()))
 	hqcClientSS := make([]byte, int(C.tafrah_hqc_128_ss_size()))
 	hqcServerSS := make([]byte, int(C.tafrah_hqc_128_ss_size()))
+	defer zeroBytes(hqcDk)
+	defer zeroBytes(hqcClientSS)
+	defer zeroBytes(hqcServerSS)
 	if err := check(C.tafrah_hqc_128_keygen(asPtr(hqcEk), C.size_t(len(hqcEk)), asPtr(hqcDk), C.size_t(len(hqcDk))), "tafrah_hqc_128_keygen"); err != nil {
 		return ProofResult{}, err
 	}
@@ -91,6 +106,7 @@ func RunProof() (ProofResult, error) {
 	mlVk := make([]byte, int(C.tafrah_ml_dsa_65_vk_size()))
 	mlSk := make([]byte, int(C.tafrah_ml_dsa_65_sk_size()))
 	mlSig := make([]byte, int(C.tafrah_ml_dsa_65_sig_size()))
+	defer zeroBytes(mlSk)
 	if err := check(C.tafrah_ml_dsa_65_keygen(asPtr(mlVk), C.size_t(len(mlVk)), asPtr(mlSk), C.size_t(len(mlSk))), "tafrah_ml_dsa_65_keygen"); err != nil {
 		return ProofResult{}, err
 	}
@@ -103,6 +119,7 @@ func RunProof() (ProofResult, error) {
 	slhVk := make([]byte, int(C.tafrah_slh_dsa_shake_128f_vk_size()))
 	slhSk := make([]byte, int(C.tafrah_slh_dsa_shake_128f_sk_size()))
 	slhSig := make([]byte, int(C.tafrah_slh_dsa_shake_128f_sig_size()))
+	defer zeroBytes(slhSk)
 	if err := check(C.tafrah_slh_dsa_shake_128f_keygen(asPtr(slhVk), C.size_t(len(slhVk)), asPtr(slhSk), C.size_t(len(slhSk))), "tafrah_slh_dsa_shake_128f_keygen"); err != nil {
 		return ProofResult{}, err
 	}
@@ -115,6 +132,7 @@ func RunProof() (ProofResult, error) {
 	falconVk := make([]byte, int(C.tafrah_falcon_512_vk_size()))
 	falconSk := make([]byte, int(C.tafrah_falcon_512_sk_size()))
 	falconSig := make([]byte, int(C.tafrah_falcon_512_sig_size()))
+	defer zeroBytes(falconSk)
 	var falconSigWritten C.size_t
 	if err := check(C.tafrah_falcon_512_keygen(asPtr(falconVk), C.size_t(len(falconVk)), asPtr(falconSk), C.size_t(len(falconSk))), "tafrah_falcon_512_keygen"); err != nil {
 		return ProofResult{}, err
@@ -152,8 +170,8 @@ func RunProof() (ProofResult, error) {
 	out := ProofResult{
 		Language:                    "go",
 		NativeVersion:               C.GoString(C.tafrah_version()),
-		MLKEM768SharedSecretMatch:   string(kemClientSS) == string(kemServerSS),
-		HQC128SharedSecretMatch:     string(hqcClientSS) == string(hqcServerSS),
+		MLKEM768SharedSecretMatch:   constantTimeEqual(kemClientSS, kemServerSS),
+		HQC128SharedSecretMatch:     constantTimeEqual(hqcClientSS, hqcServerSS),
 		MLDSA65VerifyOK:             mlVerifyOK,
 		MLDSA65TamperRejected:       !mlTamperRejected,
 		SLHDSAShake128FVerifyOK:     slhVerifyOK,

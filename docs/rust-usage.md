@@ -26,7 +26,7 @@ let mut rng = rand::rng();
 let (ek, dk) = ml_kem_768::keygen(&mut rng);
 let (ct, sender_ss) = ml_kem_768::encapsulate(&ek, &mut rng)?;
 let recipient_ss = ml_kem_768::decapsulate(&dk, &ct)?;
-assert_eq!(sender_ss.bytes, recipient_ss.bytes);
+assert_eq!(sender_ss.as_bytes(), recipient_ss.as_bytes());
 
 let (vk, sk) = ml_dsa_65::keygen(&mut rng);
 let message = b"tafrah";

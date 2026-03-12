@@ -1,3 +1,4 @@
+use subtle::ConstantTimeEq;
 use tafrah::falcon::falcon_512;
 use tafrah::hqc::hqc_128;
 use tafrah::ml_dsa::params::ML_DSA_65;
@@ -91,8 +92,10 @@ fn main() {
     let falcon_tamper_rejected =
         falcon_512::verify(&falcon_vk, b"tafrah-auth-demo::falcon-512\x03", &falcon_sig).is_err();
 
-    let overall_ok = kem_client_ss.as_bytes() == kem_server_ss.as_bytes()
-        && hqc_client_ss.as_bytes() == hqc_server_ss.as_bytes()
+    let kem_match = bool::from(kem_client_ss.as_bytes().ct_eq(kem_server_ss.as_bytes()));
+    let hqc_match = bool::from(hqc_client_ss.as_bytes().ct_eq(hqc_server_ss.as_bytes()));
+    let overall_ok = kem_match
+        && hqc_match
         && ml_verify_ok
         && ml_tamper_rejected
         && ml_extmu_ok
@@ -105,8 +108,8 @@ fn main() {
 
     println!(
         "{{\"language\":\"rust\",\"ml_kem_768_shared_secret_match\":{},\"hqc_128_shared_secret_match\":{},\"ml_dsa_65_verify_ok\":{},\"ml_dsa_65_tamper_rejected\":{},\"ml_dsa_65_extmu_ok\":{},\"ml_dsa_65_prehash_ok\":{},\"ml_dsa_65_open_ok\":{},\"slh_dsa_shake_128f_verify_ok\":{},\"slh_dsa_shake_128f_tamper_rejected\":{},\"falcon_512_verify_ok\":{},\"falcon_512_tamper_rejected\":{},\"overall_ok\":{}}}",
-        json_bool(kem_client_ss.as_bytes() == kem_server_ss.as_bytes()),
-        json_bool(hqc_client_ss.as_bytes() == hqc_server_ss.as_bytes()),
+        json_bool(kem_match),
+        json_bool(hqc_match),
         json_bool(ml_verify_ok),
         json_bool(ml_tamper_rejected),
         json_bool(ml_extmu_ok),

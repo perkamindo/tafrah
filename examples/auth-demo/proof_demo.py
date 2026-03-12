@@ -19,8 +19,33 @@ def b64(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
 
 
+def encode_parts(*parts: bytes) -> bytes:
+    out = bytearray()
+    for part in parts:
+        out.extend(len(part).to_bytes(4, "big"))
+        out.extend(part)
+    return bytes(out)
+
+
+def hkdf_sha3_256(ikm: bytes, salt: bytes, info: bytes, length: int) -> bytes:
+    prk = hmac.digest(salt, ikm, "sha3_256")
+    okm = bytearray()
+    block = b""
+    counter = 1
+    while len(okm) < length:
+        block = hmac.digest(prk, block + info + bytes([counter]), "sha3_256")
+        okm.extend(block)
+        counter += 1
+    return bytes(okm[:length])
+
+
 def derive_transport_keys(shared_secret: bytes) -> dict[str, bytes]:
-    material = hashlib.shake_256(b"tafrah-auth-demo::transport" + shared_secret).digest(128)
+    material = hkdf_sha3_256(
+        shared_secret,
+        b"tafrah-auth-demo::transport-salt",
+        encode_parts(b"tafrah-auth-demo::transport"),
+        128,
+    )
     return {
         "client_enc": material[0:32],
         "client_mac": material[32:64],
@@ -30,7 +55,12 @@ def derive_transport_keys(shared_secret: bytes) -> dict[str, bytes]:
 
 
 def derive_file_keys(shared_secret: bytes) -> dict[str, bytes]:
-    material = hashlib.shake_256(b"tafrah-auth-demo::file" + shared_secret).digest(64)
+    material = hkdf_sha3_256(
+        shared_secret,
+        b"tafrah-auth-demo::file-salt",
+        encode_parts(b"tafrah-auth-demo::file"),
+        64,
+    )
     return {
         "enc": material[0:32],
         "mac": material[32:64],
@@ -38,7 +68,12 @@ def derive_file_keys(shared_secret: bytes) -> dict[str, bytes]:
 
 
 def stream_xor(key: bytes, nonce: bytes, label: bytes, data: bytes) -> bytes:
-    stream = hashlib.shake_256(label + key + nonce).digest(len(data))
+    stream = hkdf_sha3_256(
+        key,
+        b"tafrah-auth-demo::stream-salt",
+        encode_parts(b"tafrah-auth-demo::stream", label, nonce),
+        len(data),
+    )
     return bytes(a ^ b for a, b in zip(data, stream))
 
 
@@ -82,7 +117,7 @@ def run_chat_proof(abi: TafrahABI) -> dict[str, object]:
     server_ek, server_dk = abi.ml_kem_768_keygen()
     kem_ct, client_ss = abi.ml_kem_768_encapsulate(server_ek)
     server_ss = abi.ml_kem_768_decapsulate(server_dk, kem_ct)
-    assert client_ss == server_ss
+    assert hmac.compare_digest(client_ss, server_ss)
 
     keys = derive_transport_keys(client_ss)
 
@@ -111,7 +146,7 @@ def run_chat_proof(abi: TafrahABI) -> dict[str, object]:
     ).encode("utf-8")
 
     return {
-        "shared_secret_match": client_ss == server_ss,
+        "shared_secret_match": hmac.compare_digest(client_ss, server_ss),
         "kem_ciphertext_bytes": len(kem_ct),
         "client_message": server_received.decode("utf-8"),
         "server_message": client_received.decode("utf-8"),
@@ -135,7 +170,7 @@ def run_file_proof(abi: TafrahABI) -> dict[str, object]:
     recipient_ek, recipient_dk = abi.ml_kem_768_keygen()
     kem_ct, sender_ss = abi.ml_kem_768_encapsulate(recipient_ek)
     recipient_ss = abi.ml_kem_768_decapsulate(recipient_dk, kem_ct)
-    assert sender_ss == recipient_ss
+    assert hmac.compare_digest(sender_ss, recipient_ss)
 
     keys = derive_file_keys(sender_ss)
     package = seal(keys["enc"], keys["mac"], b"file::sample_plaintext.txt", plaintext)
@@ -253,7 +288,7 @@ def print_report(abi: TafrahABI, chat: dict[str, object], file_proof: dict[str, 
 
     print("== Assessment ==")
     print("correctness: native PQC primitives survive a foreign-language roundtrip and reject tampered signatures.")
-    print("security: the ABI surface is fixed-size and explicit; the Python symmetric layer is proof-only, not a final production design.")
+    print("security: the ABI surface is fixed-size and explicit; the Python symmetric layer uses HMAC-SHA3-256 based derivation but remains proof-only, not a final production design.")
     print("maintainability: the ABI is intentionally narrow and maps directly to a small set of stable proof primitives.")
     print("developer_experience: no Python dependencies beyond stdlib, and the wrapper can auto-build the native library.")
 

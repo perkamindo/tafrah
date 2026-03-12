@@ -1,3 +1,12 @@
+//! HQC parameter bundles aligned with the local pre-standard reference material
+//! tracked by this repository.
+//!
+//! The current constants intentionally match the local `HQC-Round4-FIPS_207`
+//! reference bundle. Newer HQC draft/specification snapshots, including the
+//! August 2025 publication, advertise different serialized sizes and shared-key
+//! lengths. Consumers should treat these values as tied to the bundled
+//! reference lineage until NIST finalizes FIPS 207.
+
 use tafrah_traits::Error;
 
 #[derive(Debug, Clone, Copy)]

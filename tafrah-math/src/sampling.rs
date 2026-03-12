@@ -209,7 +209,7 @@ pub mod dsa {
         let mut poly = Poly::zero();
 
         if gamma1_bits == 17 {
-            let mut buf = vec![0u8; 576];
+            let mut buf = [0u8; 576];
             reader.read(&mut buf);
             for i in 0..256 {
                 let bit_offset = i * 18;
@@ -229,7 +229,7 @@ pub mod dsa {
                 poly.coeffs[i] = gamma1 - val as i32;
             }
         } else if gamma1_bits == 19 {
-            let mut buf = vec![0u8; 640];
+            let mut buf = [0u8; 640];
             reader.read(&mut buf);
             for i in 0..256 {
                 let bit_offset = i * 20;
@@ -300,8 +300,14 @@ mod tests {
 
     #[test]
     fn test_kem_sample_cbd_rejects_bad_eta_and_short_input() {
-        assert!(matches!(kem::sample_cbd(&[0u8; 16], 2), Err(Error::InvalidParameter)));
-        assert!(matches!(kem::sample_cbd(&[0u8; 128], 5), Err(Error::InvalidParameter)));
+        assert!(matches!(
+            kem::sample_cbd(&[0u8; 16], 2),
+            Err(Error::InvalidParameter)
+        ));
+        assert!(matches!(
+            kem::sample_cbd(&[0u8; 128], 5),
+            Err(Error::InvalidParameter)
+        ));
     }
 
     #[test]

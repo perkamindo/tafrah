@@ -13,17 +13,13 @@ fn test_ml_dsa_verify_rejects_malformed_serialized_inputs() {
     let msg = b"malformed input regression";
     let sig = ml_dsa_44::sign(&sk, msg, &mut rng);
 
-    let truncated_sig = Signature {
-        bytes: sig.bytes[..sig.bytes.len() - 1].to_vec(),
-    };
+    let truncated_sig = Signature::from_bytes(sig.as_bytes()[..sig.as_bytes().len() - 1].to_vec());
     assert_eq!(
         ml_dsa_44::verify(&vk, msg, &truncated_sig),
         Err(Error::InvalidSignatureLength),
     );
 
-    let truncated_vk = VerifyingKey {
-        bytes: vk.bytes[..vk.bytes.len() - 1].to_vec(),
-    };
+    let truncated_vk = VerifyingKey::from_bytes(vk.as_bytes()[..vk.as_bytes().len() - 1].to_vec());
     assert_eq!(
         ml_dsa_44::verify(&truncated_vk, msg, &sig),
         Err(Error::InvalidKeyLength),

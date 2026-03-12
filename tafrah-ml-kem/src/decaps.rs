@@ -139,6 +139,7 @@ pub fn ml_kem_decaps(
     g_input[..32].copy_from_slice(&m_prime);
     g_input[32..].copy_from_slice(h_ek);
     let g_output = Sha3_512::digest(&g_input);
+    // SHA3-512 always returns 64 bytes, so these fixed-size splits are exact.
 
     let k_prime: [u8; 32] = g_output[..32].try_into().unwrap();
     let r_prime: [u8; 32] = g_output[32..64].try_into().unwrap();

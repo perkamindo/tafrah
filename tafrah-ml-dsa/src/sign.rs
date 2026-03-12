@@ -16,6 +16,7 @@ use crate::params::Params;
 use crate::prehash::{build_prehash_prefix, shake256_prehash, PreHashAlgorithm};
 use crate::types::{Signature, SignedMessage, SigningKey};
 use tafrah_traits::Error;
+use zeroize::Zeroize;
 
 /// Randomness input length for ML-DSA internal signing.
 pub const ML_DSA_RNDBYTES: usize = 32;
@@ -39,7 +40,17 @@ fn expand_matrix(rho: &[u8], params: &Params) -> Vec<Vec<Poly>> {
 fn parse_signing_key<'a>(
     sk: &'a SigningKey,
     params: &Params,
-) -> Result<(&'a [u8], &'a [u8], &'a [u8], Vec<Poly>, Vec<Poly>, Vec<Poly>), Error> {
+) -> Result<
+    (
+        &'a [u8],
+        &'a [u8],
+        &'a [u8],
+        Vec<Poly>,
+        Vec<Poly>,
+        Vec<Poly>,
+    ),
+    Error,
+> {
     if sk.bytes.len() != params.sk_size() {
         return Err(Error::InvalidKeyLength);
     }
@@ -80,6 +91,12 @@ fn parse_signing_key<'a>(
     }
 
     Ok((rho, key_k, tr, s1, s2, t0))
+}
+
+fn zeroize_poly_vec(polys: &mut [Poly]) {
+    for poly in polys {
+        poly.zeroize();
+    }
 }
 
 fn sign_internal_core(
@@ -135,7 +152,7 @@ fn sign_internal_core(
     rho_pp_reader.read(&mut rho_pp);
 
     let mut kappa: u16 = 0;
-    loop {
+    let signature = loop {
         let mut y: Vec<Poly> = Vec::with_capacity(params.l);
         for i in 0..params.l {
             let counter = kappa + i as u16;
@@ -263,8 +280,15 @@ fn sign_internal_core(
         }
         sig_bytes.extend_from_slice(&encode::pack_hint(&hint_vec, params.omega));
 
-        return Ok(Signature { bytes: sig_bytes });
-    }
+        break Signature { bytes: sig_bytes };
+    };
+
+    zeroize_poly_vec(&mut s1_hat);
+    zeroize_poly_vec(&mut s2_hat);
+    zeroize_poly_vec(&mut t0_hat);
+    mu.zeroize();
+    rho_pp.zeroize();
+    Ok(signature)
 }
 
 fn zero_rnd() -> [u8; ML_DSA_RNDBYTES] {

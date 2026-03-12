@@ -1,6 +1,6 @@
 [package]
 name = "tafrah-abi"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 description = "C ABI layer for Tafrah PQC primitives"
 authors.workspace = true

@@ -192,15 +192,9 @@ fn test_hqc_parse_roundtrip_reference_layouts() {
 
         for entry in entries {
             let count = field(&entry, "count");
-            let pk = EncapsulationKey {
-                bytes: hex_decode(field(&entry, "pk")),
-            };
-            let sk = DecapsulationKey {
-                bytes: hex_decode(field(&entry, "sk")),
-            };
-            let ct = Ciphertext {
-                bytes: hex_decode(field(&entry, "ct")),
-            };
+            let pk = EncapsulationKey::from_bytes(hex_decode(field(&entry, "pk")));
+            let sk = DecapsulationKey::from_bytes(hex_decode(field(&entry, "sk")));
+            let ct = Ciphertext::from_bytes(hex_decode(field(&entry, "ct")));
 
             let parsed_pk = parse_public_key(&pk, params).unwrap_or_else(|err| {
                 panic!("{} count={count}: pk parse failed: {err}", params.alg_name)
@@ -217,17 +211,20 @@ fn test_hqc_parse_roundtrip_reference_layouts() {
             let encoded_ct = encode_ciphertext(&parsed_ct, params).unwrap();
 
             assert_eq!(
-                encoded_pk.bytes, pk.bytes,
+                encoded_pk.as_bytes(),
+                pk.as_bytes(),
                 "{} count={count}: pk roundtrip",
                 params.alg_name
             );
             assert_eq!(
-                encoded_sk.bytes, sk.bytes,
+                encoded_sk.as_bytes(),
+                sk.as_bytes(),
                 "{} count={count}: sk roundtrip",
                 params.alg_name
             );
             assert_eq!(
-                encoded_ct.bytes, ct.bytes,
+                encoded_ct.as_bytes(),
+                ct.as_bytes(),
                 "{} count={count}: ct roundtrip",
                 params.alg_name
             );
@@ -254,18 +251,15 @@ fn test_hqc_128_seed_expansion_matches_reference_digests() {
         .find(|entry| field(entry, "count") == "0")
         .expect("count=0 HQC-128 KAT");
 
-    let pk = EncapsulationKey {
-        bytes: hex_decode(field(&entry, "pk")),
-    };
-    let sk = DecapsulationKey {
-        bytes: hex_decode(field(&entry, "sk")),
-    };
+    let pk = EncapsulationKey::from_bytes(hex_decode(field(&entry, "pk")));
+    let sk = DecapsulationKey::from_bytes(hex_decode(field(&entry, "sk")));
 
     let parsed_pk = parse_public_key(&pk, &HQC_128).expect("parse pk");
     let parsed_sk = parse_secret_key(&sk, &HQC_128).expect("parse sk");
 
     assert_eq!(
-        parsed_sk.public_key.bytes, pk.bytes,
+        parsed_sk.public_key.as_bytes(),
+        pk.as_bytes(),
         "pk embedded in sk mismatch"
     );
 
@@ -291,7 +285,7 @@ fn test_hqc_128_seed_expansion_matches_reference_digests() {
         "3bd56c5df3034e3aebefd2901b24f68418ab8f82f985197a8125a9fe638202ae"
     );
     assert_eq!(
-        sha3_hex(&parsed_sk.public_key.bytes),
+        sha3_hex(parsed_sk.public_key.as_bytes()),
         "8f240e324cefd5e998c03068e6843392e0d9b314356341e9e4654c80c1400965"
     );
 
@@ -325,12 +319,8 @@ fn test_hqc_256_seed_expansion_matches_reference_digests() {
         .find(|entry| field(entry, "count") == "0")
         .expect("count=0 HQC-256 KAT");
 
-    let pk = EncapsulationKey {
-        bytes: hex_decode(field(&entry, "pk")),
-    };
-    let sk = DecapsulationKey {
-        bytes: hex_decode(field(&entry, "sk")),
-    };
+    let pk = EncapsulationKey::from_bytes(hex_decode(field(&entry, "pk")));
+    let sk = DecapsulationKey::from_bytes(hex_decode(field(&entry, "sk")));
 
     let parsed_pk = parse_public_key(&pk, &HQC_256).expect("parse pk");
     let parsed_sk = parse_secret_key(&sk, &HQC_256).expect("parse sk");
@@ -357,7 +347,7 @@ fn test_hqc_256_seed_expansion_matches_reference_digests() {
         "e4db005744c2c85b7d8cbb86ab4eb99f626b9dadf52de64ffae9b3408a75a90f"
     );
     assert_eq!(
-        sha3_hex(&parsed_sk.public_key.bytes),
+        sha3_hex(parsed_sk.public_key.as_bytes()),
         "455cb8255a152a5727a629dd4bf5848be03f5ffe9dc6d792d2a139b9ebe91679"
     );
 
@@ -420,12 +410,14 @@ fn test_hqc_keygen_reconstructs_reference_kat_entries() {
                 });
 
             assert_eq!(
-                native_pk.bytes, pk_bytes,
+                native_pk.as_bytes(),
+                pk_bytes.as_slice(),
                 "{} count={count}: pk mismatch",
                 params.alg_name
             );
             assert_eq!(
-                native_sk.bytes, sk_bytes,
+                native_sk.as_bytes(),
+                sk_bytes.as_slice(),
                 "{} count={count}: sk mismatch",
                 params.alg_name
             );
@@ -464,12 +456,8 @@ fn test_hqc_decapsulates_reference_kat_entries() {
 
         for entry in entries {
             let count = field(&entry, "count");
-            let sk = DecapsulationKey {
-                bytes: hex_decode(field(&entry, "sk")),
-            };
-            let ct = Ciphertext {
-                bytes: hex_decode(field(&entry, "ct")),
-            };
+            let sk = DecapsulationKey::from_bytes(hex_decode(field(&entry, "sk")));
+            let ct = Ciphertext::from_bytes(hex_decode(field(&entry, "ct")));
             let expected_ss = hex_decode(field(&entry, "ss"));
 
             let ss = hqc_decaps(&sk, &ct, params).unwrap_or_else(|err| {
@@ -477,7 +465,8 @@ fn test_hqc_decapsulates_reference_kat_entries() {
             });
 
             assert_eq!(
-                ss.bytes, expected_ss,
+                ss.as_bytes(),
+                expected_ss.as_slice(),
                 "{} count={count}: shared secret mismatch",
                 params.alg_name
             );
@@ -491,8 +480,8 @@ fn test_hqc_public_keygen_api_returns_well_formed_keys() {
 
     let (pk, sk) = tafrah_hqc::hqc_128::keygen(&mut rng).expect("hqc-128 keygen");
 
-    assert_eq!(pk.bytes.len(), HQC_128.pk_bytes);
-    assert_eq!(sk.bytes.len(), HQC_128.sk_bytes);
+    assert_eq!(pk.as_bytes().len(), HQC_128.pk_bytes);
+    assert_eq!(sk.as_bytes().len(), HQC_128.sk_bytes);
 
     let parsed_pk = parse_public_key(&pk, &HQC_128).expect("parse generated pk");
     let parsed_sk = parse_secret_key(&sk, &HQC_128).expect("parse generated sk");
@@ -505,7 +494,11 @@ fn test_hqc_public_keygen_api_returns_well_formed_keys() {
         reconstructed_s, parsed_pk.s,
         "generated syndrome relation mismatch"
     );
-    assert_eq!(parsed_sk.public_key.bytes, pk.bytes, "sk should embed pk");
+    assert_eq!(
+        parsed_sk.public_key.as_bytes(),
+        pk.as_bytes(),
+        "sk should embed pk"
+    );
 }
 
 #[test]
@@ -517,7 +510,8 @@ fn test_hqc_native_roundtrip_all_levels() {
         tafrah_hqc::hqc_128::encapsulate(&pk128, &mut rng).expect("hqc-128 encaps");
     let ss128_dec = tafrah_hqc::hqc_128::decapsulate(&sk128, &ct128).expect("hqc-128 decaps");
     assert_eq!(
-        ss128_dec.bytes, ss128.bytes,
+        ss128_dec.as_bytes(),
+        ss128.as_bytes(),
         "HQC-128 shared secret mismatch"
     );
 
@@ -526,7 +520,8 @@ fn test_hqc_native_roundtrip_all_levels() {
         tafrah_hqc::hqc_192::encapsulate(&pk192, &mut rng).expect("hqc-192 encaps");
     let ss192_dec = tafrah_hqc::hqc_192::decapsulate(&sk192, &ct192).expect("hqc-192 decaps");
     assert_eq!(
-        ss192_dec.bytes, ss192.bytes,
+        ss192_dec.as_bytes(),
+        ss192.as_bytes(),
         "HQC-192 shared secret mismatch"
     );
 
@@ -535,7 +530,8 @@ fn test_hqc_native_roundtrip_all_levels() {
         tafrah_hqc::hqc_256::encapsulate(&pk256, &mut rng).expect("hqc-256 encaps");
     let ss256_dec = tafrah_hqc::hqc_256::decapsulate(&sk256, &ct256).expect("hqc-256 decaps");
     assert_eq!(
-        ss256_dec.bytes, ss256.bytes,
+        ss256_dec.as_bytes(),
+        ss256.as_bytes(),
         "HQC-256 shared secret mismatch"
     );
 }
@@ -546,15 +542,9 @@ fn test_hqc_generic_api_rejects_invalid_params() {
     invalid.ct_bytes -= 1;
 
     let mut rng = rand::rngs::StdRng::from_seed([13u8; 32]);
-    let ek = EncapsulationKey {
-        bytes: vec![0u8; HQC_128.pk_bytes],
-    };
-    let dk = DecapsulationKey {
-        bytes: vec![0u8; HQC_128.sk_bytes],
-    };
-    let ct = Ciphertext {
-        bytes: vec![0u8; HQC_128.ct_bytes],
-    };
+    let ek = EncapsulationKey::from_bytes(vec![0u8; HQC_128.pk_bytes]);
+    let dk = DecapsulationKey::from_bytes(vec![0u8; HQC_128.sk_bytes]);
+    let ct = Ciphertext::from_bytes(vec![0u8; HQC_128.ct_bytes]);
 
     assert!(matches!(
         tafrah_hqc::keygen::hqc_keygen(&mut rng, &invalid),
@@ -581,39 +571,28 @@ fn test_hqc_tampered_ciphertext_zeroes_shared_secret() {
     let (ct, ss) = tafrah_hqc::hqc_128::encapsulate(&pk, &mut rng).expect("encaps");
 
     let mut tampered = ct.clone();
-    tampered.bytes[0] ^= 0x01;
+    tampered.as_mut_bytes()[0] ^= 0x01;
 
     let decapped = tafrah_hqc::hqc_128::decapsulate(&sk, &tampered).expect("decaps tampered");
     assert_ne!(
-        decapped.bytes, ss.bytes,
+        decapped.as_bytes(),
+        ss.as_bytes(),
         "tampered ciphertext must not recover the original secret"
     );
     assert!(
-        decapped.bytes.iter().all(|&byte| byte == 0),
+        decapped.as_bytes().iter().all(|&byte| byte == 0),
         "tampered ciphertext should zero the shared secret"
     );
 }
 
 #[test]
 fn test_hqc_shell_rejects_malformed_inputs_without_panicking() {
-    let short_ek = EncapsulationKey {
-        bytes: vec![0u8; HQC_128.pk_bytes - 1],
-    };
-    let short_dk = DecapsulationKey {
-        bytes: vec![0u8; HQC_128.sk_bytes - 1],
-    };
-    let short_ct = Ciphertext {
-        bytes: vec![0u8; HQC_128.ct_bytes - 1],
-    };
-    let well_sized_ek = EncapsulationKey {
-        bytes: vec![0u8; HQC_128.pk_bytes],
-    };
-    let well_sized_dk = DecapsulationKey {
-        bytes: vec![0u8; HQC_128.sk_bytes],
-    };
-    let well_sized_ct = Ciphertext {
-        bytes: vec![0u8; HQC_128.ct_bytes],
-    };
+    let short_ek = EncapsulationKey::from_bytes(vec![0u8; HQC_128.pk_bytes - 1]);
+    let short_dk = DecapsulationKey::from_bytes(vec![0u8; HQC_128.sk_bytes - 1]);
+    let short_ct = Ciphertext::from_bytes(vec![0u8; HQC_128.ct_bytes - 1]);
+    let well_sized_ek = EncapsulationKey::from_bytes(vec![0u8; HQC_128.pk_bytes]);
+    let well_sized_dk = DecapsulationKey::from_bytes(vec![0u8; HQC_128.sk_bytes]);
+    let well_sized_ct = Ciphertext::from_bytes(vec![0u8; HQC_128.ct_bytes]);
     let mut rng = rand::rng();
 
     assert!(matches!(
@@ -630,10 +609,10 @@ fn test_hqc_shell_rejects_malformed_inputs_without_panicking() {
     ));
     let (ct, ss) = tafrah_hqc::hqc_128::encapsulate(&well_sized_ek, &mut rng)
         .expect("well-sized malformed public key should not panic");
-    assert_eq!(ct.bytes.len(), HQC_128.ct_bytes);
-    assert_eq!(ss.bytes.len(), HQC_128.ss_bytes);
+    assert_eq!(ct.as_bytes().len(), HQC_128.ct_bytes);
+    assert_eq!(ss.as_bytes().len(), HQC_128.ss_bytes);
 
     let ss = tafrah_hqc::hqc_128::decapsulate(&well_sized_dk, &well_sized_ct)
         .expect("well-sized malformed secret key/ciphertext should not panic");
-    assert_eq!(ss.bytes.len(), HQC_128.ss_bytes);
+    assert_eq!(ss.as_bytes().len(), HQC_128.ss_bytes);
 }

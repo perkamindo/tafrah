@@ -10,17 +10,13 @@ fn test_slh_dsa_verify_rejects_malformed_serialized_inputs() {
     let msg = b"malformed input regression";
     let sig = tafrah_slh_dsa::sign::slh_dsa_sign(&sk, msg, &mut rng, &params).unwrap();
 
-    let truncated_sig = Signature {
-        bytes: sig.bytes[..sig.bytes.len() - 1].to_vec(),
-    };
+    let truncated_sig = Signature::from_bytes(sig.as_bytes()[..sig.as_bytes().len() - 1].to_vec());
     assert_eq!(
         tafrah_slh_dsa::verify::slh_dsa_verify(&vk, msg, &truncated_sig, &params),
         Err(Error::InvalidSignatureLength),
     );
 
-    let truncated_vk = VerifyingKey {
-        bytes: vk.bytes[..vk.bytes.len() - 1].to_vec(),
-    };
+    let truncated_vk = VerifyingKey::from_bytes(vk.as_bytes()[..vk.as_bytes().len() - 1].to_vec());
     assert_eq!(
         tafrah_slh_dsa::verify::slh_dsa_verify(&truncated_vk, msg, &sig, &params),
         Err(Error::InvalidKeyLength),
@@ -31,9 +27,7 @@ fn test_slh_dsa_verify_rejects_malformed_serialized_inputs() {
 fn test_slh_dsa_sign_rejects_malformed_inputs() {
     let mut rng = rand::rng();
     let params = SLH_DSA_SHAKE_128F;
-    let malformed_sk = SigningKey {
-        bytes: vec![0u8; params.sk_bytes - 1],
-    };
+    let malformed_sk = SigningKey::from_bytes(vec![0u8; params.sk_bytes - 1]);
 
     assert!(
         matches!(
@@ -63,9 +57,7 @@ fn test_slh_dsa_generic_api_rejects_invalid_params() {
         "invalid SLH-DSA params must be rejected at keygen",
     );
 
-    let sk = SigningKey {
-        bytes: vec![0u8; SLH_DSA_SHAKE_128F.sk_bytes],
-    };
+    let sk = SigningKey::from_bytes(vec![0u8; SLH_DSA_SHAKE_128F.sk_bytes]);
     assert!(
         matches!(
             tafrah_slh_dsa::sign::slh_dsa_sign(&sk, b"msg", &mut rng, &invalid),

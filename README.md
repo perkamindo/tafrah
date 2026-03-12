@@ -10,7 +10,8 @@ Tafrah is a Rust-native post-quantum cryptography workspace covering [FIPS `203`
 The repository is organized around three layers:
 
 - Native Rust crates for Rust consumers and `no_std`-friendly core implementations.
-- An installable C ABI in `tafrah-abi` for language wrappers and systems integration.
+- An installable C ABI in `tafrah-abi` for language wrappers and systems integration across the
+  implemented ML-KEM, ML-DSA, SLH-DSA, Falcon, and HQC parameter sets exposed by the workspace.
 - UniFFI bindings and example wrappers for higher-level host integrations.
 
 ## Library Layout
@@ -54,6 +55,9 @@ Common root targets:
 
 - [INSTALL.md](INSTALL.md)
 - [docs/README.md](docs/README.md)
+- [docs/performance.md](docs/performance.md)
+- [docs/security.md](docs/security.md)
+- [SECURITY.md](SECURITY.md)
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## Examples

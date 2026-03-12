@@ -18,6 +18,7 @@ The `tafrah` crate re-exports the major scheme crates behind feature flags:
 `tafrah-traits` exposes:
 
 - `tafrah_traits::Error`
+- `tafrah_traits::kem::Kem`
 - `tafrah_traits::kem::Encapsulate`
 - `tafrah_traits::kem::Decapsulate`
 - `tafrah_traits::dsa::SigningKey`
@@ -33,6 +34,15 @@ Fixed-parameter convenience modules expose the most common operations:
 - ML-DSA: `ml_dsa_44`, `ml_dsa_65`, `ml_dsa_87`
 - Falcon: `falcon_512`, `falcon_1024`
 - HQC: `hqc_128`, `hqc_192`, `hqc_256`
+
+For KEM consumers that want a single generic abstraction over fixed parameter
+sets, the fixed ML-KEM and HQC modules also expose marker types that implement
+`tafrah_traits::kem::Kem`.
+
+For FIPS 204 users, `ML-DSA-44` should be read as the standardized low-end
+parameter set from the final FIPS 204 document. In the final standard it maps
+to NIST security category 1. Consumers should map security categories from the
+final standard, not from older draft or Dilithium-era tables.
 
 SLH-DSA exposes parameter bundles plus the full FIPS 205 generic surface:
 

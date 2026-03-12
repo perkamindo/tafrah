@@ -63,6 +63,24 @@ std::vector<uint8_t> bytes_from_text(const char* text) {
   return std::vector<uint8_t>(value.begin(), value.end());
 }
 
+bool constant_time_equal(const std::vector<uint8_t>& lhs, const std::vector<uint8_t>& rhs) {
+  if (lhs.size() != rhs.size()) {
+    return false;
+  }
+  uint8_t diff = 0;
+  for (size_t i = 0; i < lhs.size(); ++i) {
+    diff |= lhs[i] ^ rhs[i];
+  }
+  return diff == 0;
+}
+
+void secure_zero(std::vector<uint8_t>& bytes) {
+  volatile uint8_t* ptr = bytes.data();
+  for (size_t i = 0; i < bytes.size(); ++i) {
+    ptr[i] = 0;
+  }
+}
+
 }  // namespace
 
 DemoResult run_demo() {
@@ -88,7 +106,10 @@ DemoResult run_demo() {
             dk.data(), dk.size(), ct.data(), ct.size(), server_ss.data(), server_ss.size()),
         "tafrah_ml_kem_768_decapsulate");
 
-    result.ml_kem_768_shared_secret_match = client_ss == server_ss;
+    result.ml_kem_768_shared_secret_match = constant_time_equal(client_ss, server_ss);
+    secure_zero(dk);
+    secure_zero(client_ss);
+    secure_zero(server_ss);
   }
 
   {
@@ -108,7 +129,10 @@ DemoResult run_demo() {
             dk.data(), dk.size(), ct.data(), ct.size(), server_ss.data(), server_ss.size()),
         "tafrah_hqc_128_decapsulate");
 
-    result.hqc_128_shared_secret_match = client_ss == server_ss;
+    result.hqc_128_shared_secret_match = constant_time_equal(client_ss, server_ss);
+    secure_zero(dk);
+    secure_zero(client_ss);
+    secure_zero(server_ss);
   }
 
   {
@@ -131,6 +155,7 @@ DemoResult run_demo() {
         tafrah_ml_dsa_65_verify(
             vk.data(), vk.size(), tampered.data(), tampered.size(), sig.data(), sig.size()),
         "tafrah_ml_dsa_65_verify_tampered");
+    secure_zero(sk);
   }
 
   {
@@ -157,6 +182,7 @@ DemoResult run_demo() {
         tafrah_slh_dsa_shake_128f_verify(
             vk.data(), vk.size(), tampered.data(), tampered.size(), sig.data(), sig.size()),
         "tafrah_slh_dsa_shake_128f_verify_tampered");
+    secure_zero(sk);
   }
 
   {
@@ -184,6 +210,7 @@ DemoResult run_demo() {
         tafrah_falcon_512_verify(
             vk.data(), vk.size(), tampered.data(), tampered.size(), sig.data(), sig.size()),
         "tafrah_falcon_512_verify_tampered");
+    secure_zero(sk);
   }
 
   result.ok = result.ml_kem_768_shared_secret_match &&

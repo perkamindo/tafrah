@@ -2,6 +2,33 @@
 
 All notable changes to Tafrah are documented in this file.
 
+## [0.1.7] - 2026-03-13
+
+### Added
+
+- Added opt-in SIMD backends in `tafrah-math` for ML-KEM and ML-DSA polynomial kernels:
+  - `avx2` for x86/x86_64 hosts with runtime AVX2 detection
+  - `neon` for AArch64 hosts
+- Added a benchmark crate and root targets for scalar and SIMD measurements:
+  - `make bench`
+  - `make bench-json`
+  - `make bench-avx2`
+  - `make bench-avx2-json`
+  - `make bench-neon`
+  - `make bench-neon-json`
+- Added CI coverage for SIMD benchmarking on GitHub-hosted x64 runners through a dedicated `simd-bench` job.
+
+### Changed
+
+- Refined the example implementations so shared-secret comparisons use constant-time equality where practical and key-derivation examples use stricter framing and HMAC-SHA3-256 based derivation.
+- Documented the current SIMD validation boundary, including the fact that SVE is not yet implemented and Apple Silicon validation targets Neon instead.
+- Synchronized all public workspace crate versions, ABI metadata, and user-visible version strings to `0.1.7`.
+
+### Fixed
+
+- Hardened example language integrations to avoid stale native-library loading and weaker byte-comparison patterns.
+- Kept SIMD dispatch parity-safe by validating every new backend against the scalar NTT and pointwise reference kernels before exposing it through public dispatch.
+
 ## [0.1.6] - 2026-03-12
 
 ### Added

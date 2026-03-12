@@ -227,20 +227,17 @@ fn test_reference_ml_kem_decapsulation_kats() {
 
         for entry in entries {
             let count = field(&entry, "count");
-            let dk = DecapsulationKey {
-                bytes: hex_decode(field(&entry, "sk")),
-            };
-            let ct = Ciphertext {
-                bytes: hex_decode(field(&entry, "ct")),
-            };
+            let dk = DecapsulationKey::from_bytes(hex_decode(field(&entry, "sk")));
+            let ct = Ciphertext::from_bytes(hex_decode(field(&entry, "ct")));
             let expected_ss = hex_decode(field(&entry, "ss"));
 
-            let dk_pke = &dk.bytes[..384 * params.k];
-            let ek = &dk.bytes[384 * params.k..384 * params.k + params.ek_size()];
-            let h_ek = &dk.bytes
+            let dk_bytes = dk.as_bytes();
+            let dk_pke = &dk_bytes[..384 * params.k];
+            let ek = &dk_bytes[384 * params.k..384 * params.k + params.ek_size()];
+            let h_ek = &dk_bytes
                 [384 * params.k + params.ek_size()..384 * params.k + params.ek_size() + 32];
 
-            let m_prime = tafrah_ml_kem::decaps::k_pke_decrypt(dk_pke, &ct.bytes, params)
+            let m_prime = tafrah_ml_kem::decaps::k_pke_decrypt(dk_pke, ct.as_bytes(), params)
                 .unwrap_or_else(|err| panic!("{variant} count={count}: decrypt failed: {err}"));
 
             let mut g_input = [0u8; 64];
@@ -255,7 +252,7 @@ fn test_reference_ml_kem_decapsulation_kats() {
 
             assert_eq!(
                 ct_prime.as_slice(),
-                ct.bytes.as_slice(),
+                ct.as_bytes(),
                 "{variant} count={count}: ciphertext mismatch against reference"
             );
 
@@ -263,7 +260,7 @@ fn test_reference_ml_kem_decapsulation_kats() {
             // and derives ss as SHAKE256(pre-k || H(c)). Reconstruct that legacy
             // KDF here so we can still validate parity against the local oracle
             // without changing the library's FIPS 203 semantics.
-            let h_ct = Sha3_256::digest(&ct.bytes);
+            let h_ct = Sha3_256::digest(ct.as_bytes());
             let mut legacy_kdf_input = [0u8; 64];
             legacy_kdf_input[..32].copy_from_slice(k_prime);
             legacy_kdf_input[32..].copy_from_slice(&h_ct);
@@ -388,14 +385,14 @@ fn test_reference_ml_kem_final_oracle_parity() {
             );
 
             let ss = tafrah_ml_kem::decaps::ml_kem_decaps(
-                &DecapsulationKey { bytes: sk_bytes },
-                &Ciphertext { bytes: ct_bytes },
+                &DecapsulationKey::from_bytes(sk_bytes),
+                &Ciphertext::from_bytes(ct_bytes),
                 params,
             )
             .unwrap_or_else(|err| panic!("{variant} count={count}: decapsulation failed: {err}"));
 
             assert_eq!(
-                ss.bytes.as_slice(),
+                ss.as_bytes(),
                 expected_ss.as_slice(),
                 "{variant} count={count}: decapsulation shared secret mismatch"
             );
@@ -460,12 +457,8 @@ fn test_reference_ml_dsa_verify_dilithium_master_kats() {
             let msg = hex_decode(field(&entry, "msg"));
             let sm = hex_decode(field(&entry, "sm"));
             let sig_len = sm.len() - msg.len();
-            let sig = MlDsaSignature {
-                bytes: sm[..sig_len].to_vec(),
-            };
-            let vk = MlDsaVerifyingKey {
-                bytes: hex_decode(field(&entry, "pk")),
-            };
+            let sig = MlDsaSignature::from_bytes(sm[..sig_len].to_vec());
+            let vk = MlDsaVerifyingKey::from_bytes(hex_decode(field(&entry, "pk")));
 
             tafrah_ml_dsa::verify::ml_dsa_verify(&vk, &msg, &sig, params).unwrap_or_else(|err| {
                 panic!("{variant} count={count}: verification failed against reference KAT: {err}")
@@ -520,12 +513,8 @@ fn test_reference_slh_dsa_verify_kats() {
             let msg = hex_decode(field(&entry, "msg"));
             let sm = hex_decode(field(&entry, "sm"));
             let sig_len = sm.len() - msg.len();
-            let sig = SlhDsaSignature {
-                bytes: sm[..sig_len].to_vec(),
-            };
-            let vk = SlhDsaVerifyingKey {
-                bytes: hex_decode(field(&entry, "pk")),
-            };
+            let sig = SlhDsaSignature::from_bytes(sm[..sig_len].to_vec());
+            let vk = SlhDsaVerifyingKey::from_bytes(hex_decode(field(&entry, "pk")));
 
             tafrah_slh_dsa::verify::slh_dsa_verify(&vk, &msg, &sig, params).unwrap_or_else(|err| {
                 panic!("{variant} count={count}: verification failed against reference KAT: {err}")

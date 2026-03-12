@@ -2,8 +2,25 @@
 /// Direct port from pq-crystals/kyber ref implementation
 pub mod kem {
     use crate::field::kem;
+    #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+    use crate::ntt_avx2;
+    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+    use crate::ntt_neon;
 
     pub const N: usize = 256;
+
+    #[inline]
+    pub fn backend_name() -> &'static str {
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        if ntt_neon::kem::is_available() {
+            return "neon";
+        }
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        if ntt_avx2::kem::is_available() {
+            return "avx2";
+        }
+        "scalar"
+    }
 
     /// From pq-crystals/kyber/ref/ntt.c
     pub static ZETAS: [i16; 128] = [
@@ -20,7 +37,7 @@ pub mod kem {
 
     /// Forward NTT (Algorithm 9, FIPS 203)
     /// From pq-crystals/kyber/ref/ntt.c: ntt()
-    pub fn ntt(r: &mut [i16; N]) {
+    fn ntt_scalar(r: &mut [i16; N]) {
         let mut k: usize = 1;
         let mut len: usize = 128;
         while len >= 2 {
@@ -39,9 +56,27 @@ pub mod kem {
         }
     }
 
+    pub fn ntt(r: &mut [i16; N]) {
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        if ntt_neon::kem::is_available() {
+            unsafe {
+                ntt_neon::kem::ntt(r);
+            }
+            return;
+        }
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        if ntt_avx2::kem::is_available() {
+            unsafe {
+                ntt_avx2::kem::ntt(r);
+            }
+            return;
+        }
+        ntt_scalar(r);
+    }
+
     /// Inverse NTT (Algorithm 10, FIPS 203)
     /// From pq-crystals/kyber/ref/ntt.c: invntt_tomont()
-    pub fn inv_ntt(r: &mut [i16; N]) {
+    fn inv_ntt_scalar(r: &mut [i16; N]) {
         let mut k: usize = 127;
         let mut len: usize = 2;
         while len <= 128 {
@@ -66,6 +101,24 @@ pub mod kem {
         }
     }
 
+    pub fn inv_ntt(r: &mut [i16; N]) {
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        if ntt_neon::kem::is_available() {
+            unsafe {
+                ntt_neon::kem::inv_ntt(r);
+            }
+            return;
+        }
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        if ntt_avx2::kem::is_available() {
+            unsafe {
+                ntt_avx2::kem::inv_ntt(r);
+            }
+            return;
+        }
+        inv_ntt_scalar(r);
+    }
+
     /// Base-case multiplication of two degree-1 polynomials in NTT domain
     /// From pq-crystals/kyber/ref/ntt.c: basemul()
     #[inline]
@@ -79,7 +132,7 @@ pub mod kem {
 
     /// Multiply two polynomials in NTT domain
     /// From pq-crystals/kyber/ref/poly.c: poly_basemul_montgomery()
-    pub fn poly_basemul_montgomery(r: &mut [i16; N], a: &[i16; N], b: &[i16; N]) {
+    fn poly_basemul_montgomery_scalar(r: &mut [i16; N], a: &[i16; N], b: &[i16; N]) {
         for i in 0..64 {
             basemul(&mut r[4 * i..], &a[4 * i..], &b[4 * i..], ZETAS[64 + i]);
             basemul(
@@ -89,6 +142,24 @@ pub mod kem {
                 -ZETAS[64 + i],
             );
         }
+    }
+
+    pub fn poly_basemul_montgomery(r: &mut [i16; N], a: &[i16; N], b: &[i16; N]) {
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        if ntt_neon::kem::is_available() {
+            unsafe {
+                ntt_neon::kem::poly_basemul_montgomery(r, a, b);
+            }
+            return;
+        }
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        if ntt_avx2::kem::is_available() {
+            unsafe {
+                ntt_avx2::kem::poly_basemul_montgomery(r, a, b);
+            }
+            return;
+        }
+        poly_basemul_montgomery_scalar(r, a, b);
     }
 
     #[cfg(test)]
@@ -138,6 +209,93 @@ pub mod kem {
                 assert_eq!(*coeff, 0);
             }
         }
+
+        #[test]
+        fn test_dispatch_matches_scalar() {
+            let mut scalar = [0i16; N];
+            let mut dispatched = [0i16; N];
+            for (i, coeff) in scalar.iter_mut().enumerate() {
+                *coeff = ((i as i16).wrapping_mul(17)).rem_euclid(Q);
+            }
+            dispatched.copy_from_slice(&scalar);
+            ntt_scalar(&mut scalar);
+            ntt(&mut dispatched);
+            assert_eq!(scalar, dispatched);
+        }
+
+        #[test]
+        fn test_backend_name_known() {
+            assert!(matches!(backend_name(), "scalar" | "avx2" | "neon"));
+        }
+
+        #[test]
+        fn test_inv_dispatch_matches_scalar() {
+            let mut scalar = [0i16; N];
+            let mut dispatched = [0i16; N];
+            for (i, coeff) in scalar.iter_mut().enumerate() {
+                *coeff = ((i as i16).wrapping_mul(17)).rem_euclid(Q);
+            }
+            ntt_scalar(&mut scalar);
+            dispatched.copy_from_slice(&scalar);
+            inv_ntt_scalar(&mut scalar);
+            inv_ntt(&mut dispatched);
+            assert_eq!(scalar, dispatched);
+        }
+
+        #[test]
+        fn test_basemul_dispatch_matches_scalar() {
+            let mut a = [0i16; N];
+            let mut b = [0i16; N];
+            for i in 0..N {
+                a[i] = ((i as i16).wrapping_mul(17)).rem_euclid(Q);
+                b[i] = ((i as i16).wrapping_mul(29)).rem_euclid(Q);
+            }
+            let mut scalar = [0i16; N];
+            let mut dispatched = [0i16; N];
+            poly_basemul_montgomery_scalar(&mut scalar, &a, &b);
+            poly_basemul_montgomery(&mut dispatched, &a, &b);
+            assert_eq!(scalar, dispatched);
+        }
+
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        #[test]
+        fn test_avx2_basemul_matches_scalar_when_available() {
+            if !crate::ntt_avx2::kem::is_available() {
+                return;
+            }
+
+            let mut a = [0i16; N];
+            let mut b = [0i16; N];
+            for i in 0..N {
+                a[i] = ((i as i16).wrapping_mul(17)).rem_euclid(Q);
+                b[i] = ((i as i16).wrapping_mul(29)).rem_euclid(Q);
+            }
+            let mut scalar = [0i16; N];
+            let mut avx2 = [0i16; N];
+            poly_basemul_montgomery_scalar(&mut scalar, &a, &b);
+            unsafe {
+                crate::ntt_avx2::kem::poly_basemul_montgomery(&mut avx2, &a, &b);
+            }
+            assert_eq!(scalar, avx2);
+        }
+
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        #[test]
+        fn test_neon_basemul_matches_scalar() {
+            let mut a = [0i16; N];
+            let mut b = [0i16; N];
+            for i in 0..N {
+                a[i] = ((i as i16).wrapping_mul(17)).rem_euclid(Q);
+                b[i] = ((i as i16).wrapping_mul(29)).rem_euclid(Q);
+            }
+            let mut scalar = [0i16; N];
+            let mut neon = [0i16; N];
+            poly_basemul_montgomery_scalar(&mut scalar, &a, &b);
+            unsafe {
+                crate::ntt_neon::kem::poly_basemul_montgomery(&mut neon, &a, &b);
+            }
+            assert_eq!(scalar, neon);
+        }
     }
 }
 
@@ -145,6 +303,10 @@ pub mod kem {
 /// Direct port from pq-crystals/dilithium ref implementation
 pub mod dsa {
     use crate::field::dsa;
+    #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+    use crate::ntt_avx2;
+    #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+    use crate::ntt_neon;
 
     pub const N: usize = 256;
 
@@ -180,9 +342,22 @@ pub mod dsa {
         1976782,
     ];
 
+    #[inline]
+    pub fn backend_name() -> &'static str {
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        if ntt_neon::dsa::is_available() {
+            return "neon";
+        }
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        if ntt_avx2::dsa::is_available() {
+            return "avx2";
+        }
+        "scalar"
+    }
+
     /// Forward NTT for ML-DSA
     /// From pq-crystals/dilithium/ref/ntt.c: ntt()
-    pub fn ntt(a: &mut [i32; N]) {
+    fn ntt_scalar(a: &mut [i32; N]) {
         let mut k: usize = 0;
         let mut len: usize = 128;
         while len > 0 {
@@ -201,9 +376,29 @@ pub mod dsa {
         }
     }
 
+    pub fn ntt(a: &mut [i32; N]) {
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        if ntt_neon::dsa::is_available() {
+            // AArch64 guarantees Neon support.
+            unsafe {
+                ntt_neon::dsa::ntt(a);
+            }
+            return;
+        }
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        if ntt_avx2::dsa::is_available() {
+            // Runtime detection guarantees that the target feature is available.
+            unsafe {
+                ntt_avx2::dsa::ntt(a);
+            }
+            return;
+        }
+        ntt_scalar(a);
+    }
+
     /// Inverse NTT for ML-DSA
     /// From pq-crystals/dilithium/ref/ntt.c: invntt_tomont()
-    pub fn inv_ntt(a: &mut [i32; N]) {
+    fn inv_ntt_scalar(a: &mut [i32; N]) {
         let mut k: usize = 256;
         let mut len: usize = 1;
         while len < N {
@@ -228,11 +423,150 @@ pub mod dsa {
         }
     }
 
+    pub fn inv_ntt(a: &mut [i32; N]) {
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        if ntt_neon::dsa::is_available() {
+            // AArch64 guarantees Neon support.
+            unsafe {
+                ntt_neon::dsa::inv_ntt(a);
+            }
+            return;
+        }
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        if ntt_avx2::dsa::is_available() {
+            // Runtime detection guarantees that the target feature is available.
+            unsafe {
+                ntt_avx2::dsa::inv_ntt(a);
+            }
+            return;
+        }
+        inv_ntt_scalar(a);
+    }
+
     /// Pointwise multiplication in NTT domain for ML-DSA
     /// From pq-crystals/dilithium/ref/ntt.c: pointwise_montgomery()
-    pub fn pointwise_mul(a: &[i32; N], b: &[i32; N], c: &mut [i32; N]) {
+    fn pointwise_mul_scalar(a: &[i32; N], b: &[i32; N], c: &mut [i32; N]) {
         for i in 0..N {
             c[i] = dsa::montgomery_reduce(a[i] as i64 * b[i] as i64);
+        }
+    }
+
+    pub fn pointwise_mul(a: &[i32; N], b: &[i32; N], c: &mut [i32; N]) {
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        if ntt_neon::dsa::is_available() {
+            // AArch64 guarantees Neon support.
+            unsafe {
+                ntt_neon::dsa::pointwise_mul(c, a, b);
+            }
+            return;
+        }
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        if ntt_avx2::dsa::is_available() {
+            // Runtime detection guarantees that the target feature is available.
+            unsafe {
+                ntt_avx2::dsa::pointwise_mul(c, a, b);
+            }
+            return;
+        }
+        pointwise_mul_scalar(a, b, c);
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_backend_name_known() {
+            assert!(matches!(backend_name(), "scalar" | "avx2" | "neon"));
+        }
+
+        #[test]
+        fn test_ntt_dispatch_matches_scalar() {
+            let mut scalar = [0i32; N];
+            let mut dispatched = [0i32; N];
+            for (i, coeff) in scalar.iter_mut().enumerate() {
+                *coeff = ((i as i32 * 65537) % dsa::Q_I32) - (dsa::Q_I32 / 2);
+            }
+            dispatched.copy_from_slice(&scalar);
+
+            ntt_scalar(&mut scalar);
+            ntt(&mut dispatched);
+            assert_eq!(scalar, dispatched);
+        }
+
+        #[test]
+        fn test_inv_ntt_dispatch_matches_scalar() {
+            let mut scalar = [0i32; N];
+            let mut dispatched = [0i32; N];
+            for (i, coeff) in scalar.iter_mut().enumerate() {
+                *coeff = ((i as i32 * 65537) % dsa::Q_I32) - (dsa::Q_I32 / 2);
+            }
+            ntt_scalar(&mut scalar);
+            dispatched.copy_from_slice(&scalar);
+
+            inv_ntt_scalar(&mut scalar);
+            inv_ntt(&mut dispatched);
+            assert_eq!(scalar, dispatched);
+        }
+
+        #[test]
+        fn test_pointwise_dispatch_matches_scalar() {
+            let mut a = [0i32; N];
+            let mut b = [0i32; N];
+            for (i, coeff) in a.iter_mut().enumerate() {
+                *coeff = ((i as i32 * 65537) % dsa::Q_I32) - (dsa::Q_I32 / 2);
+            }
+            for (i, coeff) in b.iter_mut().enumerate() {
+                *coeff = ((i as i32 * 123_457) % dsa::Q_I32) - (dsa::Q_I32 / 3);
+            }
+
+            let mut scalar = [0i32; N];
+            let mut dispatched = [0i32; N];
+            pointwise_mul_scalar(&a, &b, &mut scalar);
+            pointwise_mul(&a, &b, &mut dispatched);
+            assert_eq!(scalar, dispatched);
+        }
+
+        #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
+        #[test]
+        fn test_avx2_pointwise_matches_scalar_when_available() {
+            if !crate::ntt_avx2::dsa::is_available() {
+                return;
+            }
+
+            let mut a = [0i32; N];
+            let mut b = [0i32; N];
+            for i in 0..N {
+                a[i] = ((i as i32 * 123_457) % dsa::Q_I32) - (dsa::Q_I32 / 2);
+                b[i] = ((i as i32 * 765_431) % dsa::Q_I32) - (dsa::Q_I32 / 2);
+            }
+
+            let mut scalar = [0i32; N];
+            let mut avx2 = [0i32; N];
+            pointwise_mul_scalar(&a, &b, &mut scalar);
+            unsafe {
+                crate::ntt_avx2::dsa::pointwise_mul(&mut avx2, &a, &b);
+            }
+            assert_eq!(scalar, avx2);
+        }
+
+        #[cfg(all(feature = "neon", target_arch = "aarch64"))]
+        #[test]
+        fn test_neon_pointwise_matches_scalar() {
+            let mut a = [0i32; N];
+            let mut b = [0i32; N];
+            for i in 0..N {
+                a[i] = ((i as i32 * 123_457) % dsa::Q_I32) - (dsa::Q_I32 / 2);
+                b[i] = ((i as i32 * 765_431) % dsa::Q_I32) - (dsa::Q_I32 / 2);
+            }
+
+            let mut scalar = [0i32; N];
+            let mut neon = [0i32; N];
+            pointwise_mul_scalar(&a, &b, &mut scalar);
+            unsafe {
+                crate::ntt_neon::dsa::pointwise_mul(&mut neon, &a, &b);
+            }
+            assert_eq!(scalar, neon);
         }
     }
 }

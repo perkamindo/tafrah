@@ -15,38 +15,56 @@ std::vector<uint8_t> bytes_from_text(const char* text) {
   return std::vector<uint8_t>(value.begin(), value.end());
 }
 
+bool constant_time_equal(const std::vector<uint8_t>& lhs, const std::vector<uint8_t>& rhs) {
+  if (lhs.size() != rhs.size()) {
+    return false;
+  }
+  uint8_t diff = 0;
+  for (size_t i = 0; i < lhs.size(); ++i) {
+    diff |= lhs[i] ^ rhs[i];
+  }
+  return diff == 0;
+}
+
+void secure_zero(std::vector<uint8_t>& bytes) {
+  volatile uint8_t* ptr = bytes.data();
+  for (size_t i = 0; i < bytes.size(); ++i) {
+    ptr[i] = 0;
+  }
+}
+
 }  // namespace
 
 int main() {
   try {
-    const auto kem = tafrah::ml_kem_768_keygen();
-    const auto kem_enc = tafrah::ml_kem_768_encapsulate(kem.public_key);
-    const auto kem_ss = tafrah::ml_kem_768_decapsulate(kem.secret_key, kem_enc.first);
+    auto kem = tafrah::ml_kem_768_keygen();
+    auto kem_enc = tafrah::ml_kem_768_encapsulate(kem.public_key);
+    auto kem_ss = tafrah::ml_kem_768_decapsulate(kem.secret_key, kem_enc.first);
 
-    const auto hqc = tafrah::hqc_128_keygen();
-    const auto hqc_enc = tafrah::hqc_128_encapsulate(hqc.public_key);
-    const auto hqc_ss = tafrah::hqc_128_decapsulate(hqc.secret_key, hqc_enc.first);
+    auto hqc = tafrah::hqc_128_keygen();
+    auto hqc_enc = tafrah::hqc_128_encapsulate(hqc.public_key);
+    auto hqc_ss = tafrah::hqc_128_decapsulate(hqc.secret_key, hqc_enc.first);
 
-    const auto ml_dsa = tafrah::ml_dsa_65_keygen();
+    auto ml_dsa = tafrah::ml_dsa_65_keygen();
     const auto ml_msg = bytes_from_text("tafrah-auth-demo::ml-dsa-65");
     const auto ml_sig = tafrah::ml_dsa_65_sign(ml_dsa.secret_key, ml_msg);
     auto ml_tampered = ml_msg;
     ml_tampered.push_back(1);
 
-    const auto slh = tafrah::slh_dsa_shake_128f_keygen();
+    auto slh = tafrah::slh_dsa_shake_128f_keygen();
     const auto slh_msg = bytes_from_text("tafrah-auth-demo::slh-dsa-shake-128f");
     const auto slh_sig = tafrah::slh_dsa_shake_128f_sign(slh.secret_key, slh_msg);
     auto slh_tampered = slh_msg;
     slh_tampered.push_back(2);
 
-    const auto falcon = tafrah::falcon_512_keygen();
+    auto falcon = tafrah::falcon_512_keygen();
     const auto falcon_msg = bytes_from_text("tafrah-auth-demo::falcon-512");
     const auto falcon_sig = tafrah::falcon_512_sign(falcon.secret_key, falcon_msg);
     auto falcon_tampered = falcon_msg;
     falcon_tampered.push_back(3);
 
-    const bool ml_kem_ok = kem_enc.second == kem_ss;
-    const bool hqc_ok = hqc_enc.second == hqc_ss;
+    const bool ml_kem_ok = constant_time_equal(kem_enc.second, kem_ss);
+    const bool hqc_ok = constant_time_equal(hqc_enc.second, hqc_ss);
     const bool ml_dsa_ok = tafrah::ml_dsa_65_verify(ml_dsa.public_key, ml_msg, ml_sig);
     const bool ml_dsa_tamper = !tafrah::ml_dsa_65_verify(ml_dsa.public_key, ml_tampered, ml_sig);
     const bool slh_ok = tafrah::slh_dsa_shake_128f_verify(slh.public_key, slh_msg, slh_sig);
@@ -57,6 +75,16 @@ int main() {
     const bool overall_ok =
         ml_kem_ok && hqc_ok && ml_dsa_ok && ml_dsa_tamper && slh_ok && slh_tamper && falcon_ok &&
         falcon_tamper;
+
+    secure_zero(kem.secret_key);
+    secure_zero(kem_enc.second);
+    secure_zero(kem_ss);
+    secure_zero(hqc.secret_key);
+    secure_zero(hqc_enc.second);
+    secure_zero(hqc_ss);
+    secure_zero(ml_dsa.secret_key);
+    secure_zero(slh.secret_key);
+    secure_zero(falcon.secret_key);
 
     std::cout
         << "{\"language\":\"cpp\",\"native_version\":\"" << tafrah::version()

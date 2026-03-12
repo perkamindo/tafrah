@@ -287,28 +287,37 @@ fn assert_count0_case_matches_reference(variant: &str, params: &Params, binary: 
     )
     .unwrap();
 
-    assert_eq!(vk.bytes, oracle_pk, "{variant}: oracle public key mismatch");
-    assert_eq!(sk.bytes, oracle_sk, "{variant}: oracle secret key mismatch");
+    assert_eq!(
+        vk.as_bytes(),
+        oracle_pk.as_slice(),
+        "{variant}: oracle public key mismatch"
+    );
+    assert_eq!(
+        sk.as_bytes(),
+        oracle_sk.as_slice(),
+        "{variant}: oracle secret key mismatch"
+    );
 
     let internal_sig = slh_sign_internal(&sk, &msg, Some(&optrand), params).unwrap();
     let fors_len = params.k * (1 + params.a) * params.n;
     assert_eq!(
-        &internal_sig.bytes[..params.n],
+        &internal_sig.as_bytes()[..params.n],
         &oracle_internal_sig[..params.n],
         "{variant}: internal R mismatch vs FIPS 205 reference"
     );
     assert_eq!(
-        &internal_sig.bytes[params.n..params.n + fors_len],
+        &internal_sig.as_bytes()[params.n..params.n + fors_len],
         &oracle_internal_sig[params.n..params.n + fors_len],
         "{variant}: internal FORS mismatch vs FIPS 205 reference"
     );
     assert_eq!(
-        &internal_sig.bytes[params.n + fors_len..],
+        &internal_sig.as_bytes()[params.n + fors_len..],
         &oracle_internal_sig[params.n + fors_len..],
         "{variant}: internal HT mismatch vs FIPS 205 reference"
     );
     assert_eq!(
-        internal_sig.bytes, oracle_internal_sig,
+        internal_sig.as_bytes(),
+        oracle_internal_sig.as_slice(),
         "{variant}: internal signature mismatch vs FIPS 205 reference"
     );
     slh_verify_internal(&vk, &msg, &internal_sig, params).unwrap();
@@ -325,12 +334,13 @@ fn assert_count0_case_matches_reference(variant: &str, params: &Params, binary: 
     );
     let pure_sig = slh_sign(&sk, &msg, ctx, Some(&optrand), params).unwrap();
     assert_eq!(
-        &pure_sig.bytes[..params.n],
+        &pure_sig.as_bytes()[..params.n],
         &oracle_pure_sig[..params.n],
         "{variant}: pure R mismatch vs FIPS 205 reference"
     );
     assert_eq!(
-        pure_sig.bytes, oracle_pure_sig,
+        pure_sig.as_bytes(),
+        oracle_pure_sig.as_slice(),
         "{variant}: pure signature mismatch vs FIPS 205 reference"
     );
     slh_verify(&vk, &msg, &pure_sig, ctx, params).unwrap();
@@ -348,12 +358,13 @@ fn assert_count0_case_matches_reference(variant: &str, params: &Params, binary: 
     );
     let prehash_sig = hash_slh_sign(&sk, &msg, ctx, prehash, Some(&optrand), params).unwrap();
     assert_eq!(
-        &prehash_sig.bytes[..params.n],
+        &prehash_sig.as_bytes()[..params.n],
         &oracle_prehash_sig[..params.n],
         "{variant}: prehash R mismatch vs FIPS 205 reference"
     );
     assert_eq!(
-        prehash_sig.bytes, oracle_prehash_sig,
+        prehash_sig.as_bytes(),
+        oracle_prehash_sig.as_slice(),
         "{variant}: prehash signature mismatch vs FIPS 205 reference"
     );
     hash_slh_verify(&vk, &msg, &prehash_sig, ctx, prehash, params).unwrap();
@@ -502,20 +513,20 @@ fn test_fips205_prehash_reference_all_algorithms() {
         );
         assert_eq!(
             oracle_pk,
-            vk.bytes,
+            vk.as_bytes(),
             "{}: oracle pk drift",
             algorithm.identifier()
         );
         assert_eq!(
             oracle_sk,
-            sk.bytes,
+            sk.as_bytes(),
             "{}: oracle sk drift",
             algorithm.identifier()
         );
 
         let sig = hash_slh_sign(&sk, msg, ctx, algorithm, Some(&optrand), &params).unwrap();
         assert_eq!(
-            sig.bytes,
+            sig.as_bytes(),
             oracle_sig,
             "{}: prehash mismatch",
             algorithm.identifier()
@@ -614,7 +625,8 @@ fn test_fips205_selected_deep_counts() {
                     _ => unreachable!(),
                 };
                 assert_eq!(
-                    rust_sig.bytes, oracle_sig,
+                    rust_sig.as_bytes(),
+                    oracle_sig.as_slice(),
                     "{variant} count={target_count}: {mode} mismatch vs FIPS 205 reference"
                 );
             }

@@ -120,7 +120,7 @@ fn hqc_encapsulation(
         &mut ThreadRng,
     ) -> Result<(HqcCiphertext, tafrah_hqc::types::SharedSecret), Error>,
 ) -> Result<EncapsulationResult, UniFfiError> {
-    let ek = HqcEncapsulationKey { bytes: ek };
+    let ek = HqcEncapsulationKey::from_bytes(ek);
     let mut rng = rand::rng();
     let (ct, ss) = encapsulate(&ek, &mut rng)?;
     Ok(EncapsulationResult {
@@ -137,8 +137,8 @@ fn hqc_decapsulation(
         &HqcCiphertext,
     ) -> Result<tafrah_hqc::types::SharedSecret, Error>,
 ) -> Result<Vec<u8>, UniFfiError> {
-    let dk = HqcDecapsulationKey { bytes: dk };
-    let ct = HqcCiphertext { bytes: ct };
+    let dk = HqcDecapsulationKey::from_bytes(dk);
+    let ct = HqcCiphertext::from_bytes(ct);
     let ss = decapsulate(&dk, &ct)?;
     Ok(ss.as_bytes().to_vec())
 }
@@ -175,7 +175,7 @@ fn falcon_keypair(
 
 #[uniffi::export]
 pub fn version() -> String {
-    "tafrah-uniffi/0.1.6".to_owned()
+    "tafrah-uniffi/0.1.7".to_owned()
 }
 
 #[uniffi::export]
@@ -209,7 +209,7 @@ pub fn ml_kem_768_keygen() -> KemKeypair {
 
 #[uniffi::export]
 pub fn ml_kem_768_encapsulate(ek: Vec<u8>) -> Result<EncapsulationResult, UniFfiError> {
-    let ek = MlKemEncapsulationKey { bytes: ek };
+    let ek = MlKemEncapsulationKey::from_bytes(ek);
     let mut rng = rand::rng();
     let (ct, ss) = tafrah_ml_kem::ml_kem_768::encapsulate(&ek, &mut rng)?;
     Ok(EncapsulationResult {
@@ -220,8 +220,8 @@ pub fn ml_kem_768_encapsulate(ek: Vec<u8>) -> Result<EncapsulationResult, UniFfi
 
 #[uniffi::export]
 pub fn ml_kem_768_decapsulate(dk: Vec<u8>, ct: Vec<u8>) -> Result<Vec<u8>, UniFfiError> {
-    let dk = MlKemDecapsulationKey { bytes: dk };
-    let ct = MlKemCiphertext { bytes: ct };
+    let dk = MlKemDecapsulationKey::from_bytes(dk);
+    let ct = MlKemCiphertext::from_bytes(ct);
     let ss = tafrah_ml_kem::ml_kem_768::decapsulate(&dk, &ct)?;
     Ok(ss.as_bytes().to_vec())
 }
@@ -243,7 +243,7 @@ pub fn ml_dsa_65_keygen() -> SignatureKeypair {
 
 #[uniffi::export]
 pub fn ml_dsa_65_sign(sk: Vec<u8>, message: Vec<u8>) -> Result<Vec<u8>, UniFfiError> {
-    let sk = MlDsaSigningKey { bytes: sk };
+    let sk = MlDsaSigningKey::from_bytes(sk);
     let mut rng = rand::rng();
     let sig = tafrah_ml_dsa::ml_dsa_65::sign_with_context(&sk, &message, &[], &mut rng)?;
     Ok(sig.as_bytes().to_vec())
@@ -251,8 +251,8 @@ pub fn ml_dsa_65_sign(sk: Vec<u8>, message: Vec<u8>) -> Result<Vec<u8>, UniFfiEr
 
 #[uniffi::export]
 pub fn ml_dsa_65_verify(vk: Vec<u8>, message: Vec<u8>, sig: Vec<u8>) -> Result<bool, UniFfiError> {
-    let vk = MlDsaVerifyingKey { bytes: vk };
-    let sig = MlDsaSignature { bytes: sig };
+    let vk = MlDsaVerifyingKey::from_bytes(vk);
+    let sig = MlDsaSignature::from_bytes(sig);
     match tafrah_ml_dsa::ml_dsa_65::verify_with_context(&vk, &message, &sig, &[]) {
         Ok(()) => Ok(true),
         Err(Error::VerificationFailed) => Ok(false),
@@ -277,7 +277,7 @@ pub fn slh_dsa_shake_128f_keygen() -> SignatureKeypair {
 
 #[uniffi::export]
 pub fn slh_dsa_shake_128f_sign(sk: Vec<u8>, message: Vec<u8>) -> Result<Vec<u8>, UniFfiError> {
-    let sk = SlhDsaSigningKey { bytes: sk };
+    let sk = SlhDsaSigningKey::from_bytes(sk);
     let mut rng = rand::rng();
     let sig = tafrah_slh_dsa::sign::slh_dsa_sign(&sk, &message, &mut rng, &SLH_DSA_SHAKE_128F)?;
     Ok(sig.as_bytes().to_vec())
@@ -289,8 +289,8 @@ pub fn slh_dsa_shake_128f_verify(
     message: Vec<u8>,
     sig: Vec<u8>,
 ) -> Result<bool, UniFfiError> {
-    let vk = SlhDsaVerifyingKey { bytes: vk };
-    let sig = SlhDsaSignature { bytes: sig };
+    let vk = SlhDsaVerifyingKey::from_bytes(vk);
+    let sig = SlhDsaSignature::from_bytes(sig);
     match tafrah_slh_dsa::verify::slh_dsa_verify(&vk, &message, &sig, &SLH_DSA_SHAKE_128F) {
         Ok(()) => Ok(true),
         Err(Error::VerificationFailed) => Ok(false),
@@ -315,7 +315,7 @@ pub fn falcon_512_keygen() -> Result<SignatureKeypair, UniFfiError> {
 
 #[uniffi::export]
 pub fn falcon_512_sign(sk: Vec<u8>, message: Vec<u8>) -> Result<Vec<u8>, UniFfiError> {
-    let sk = FalconSigningKey { bytes: sk };
+    let sk = FalconSigningKey::from_bytes(sk);
     let mut rng = rand::rng();
     let sig = tafrah_falcon::falcon_512::sign(&sk, &message, &mut rng)?;
     Ok(sig.as_bytes().to_vec())
@@ -323,8 +323,8 @@ pub fn falcon_512_sign(sk: Vec<u8>, message: Vec<u8>) -> Result<Vec<u8>, UniFfiE
 
 #[uniffi::export]
 pub fn falcon_512_verify(vk: Vec<u8>, message: Vec<u8>, sig: Vec<u8>) -> Result<bool, UniFfiError> {
-    let vk = FalconVerifyingKey { bytes: vk };
-    let sig = FalconSignature { bytes: sig };
+    let vk = FalconVerifyingKey::from_bytes(vk);
+    let sig = FalconSignature::from_bytes(sig);
     match tafrah_falcon::falcon_512::verify(&vk, &message, &sig) {
         Ok(()) => Ok(true),
         Err(Error::VerificationFailed) => Ok(false),
@@ -349,7 +349,7 @@ pub fn falcon_1024_keygen() -> Result<SignatureKeypair, UniFfiError> {
 
 #[uniffi::export]
 pub fn falcon_1024_sign(sk: Vec<u8>, message: Vec<u8>) -> Result<Vec<u8>, UniFfiError> {
-    let sk = FalconSigningKey { bytes: sk };
+    let sk = FalconSigningKey::from_bytes(sk);
     let mut rng = rand::rng();
     let sig = tafrah_falcon::falcon_1024::sign(&sk, &message, &mut rng)?;
     Ok(sig.as_bytes().to_vec())
@@ -361,8 +361,8 @@ pub fn falcon_1024_verify(
     message: Vec<u8>,
     sig: Vec<u8>,
 ) -> Result<bool, UniFfiError> {
-    let vk = FalconVerifyingKey { bytes: vk };
-    let sig = FalconSignature { bytes: sig };
+    let vk = FalconVerifyingKey::from_bytes(vk);
+    let sig = FalconSignature::from_bytes(sig);
     match tafrah_falcon::falcon_1024::verify(&vk, &message, &sig) {
         Ok(()) => Ok(true),
         Err(Error::VerificationFailed) => Ok(false),

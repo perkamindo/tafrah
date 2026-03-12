@@ -7,6 +7,8 @@
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
 
 pub mod dsa;
 pub mod kem;
@@ -46,5 +48,20 @@ impl fmt::Display for Error {
             Error::RngError => write!(f, "RNG error"),
             Error::NotImplemented => write!(f, "not implemented"),
         }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Error {}
+
+#[cfg(all(test, feature = "std"))]
+mod tests {
+    use super::Error;
+
+    fn assert_std_error<T: std::error::Error>() {}
+
+    #[test]
+    fn error_implements_std_error() {
+        assert_std_error::<Error>();
     }
 }

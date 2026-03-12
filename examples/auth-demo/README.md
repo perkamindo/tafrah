@@ -76,5 +76,6 @@ Generated directories such as `build/`, `results/`, `artifacts/`, and `__pycache
 ## Scope and Limits
 
 - The Python symmetric encryption layer is proof-only. It is intentionally simple and is not presented as a production transport or file format.
+- The proof scripts now use HMAC-SHA3-256 based derivation and explicit framing, but they are still demonstrations rather than finalized protocol or file-format guidance.
 - The shared-library wrappers are thin by design. Their job is to prove ABI usability, not to replace a polished SDK yet.
 - The Rust example is the recommended path for Rust applications because it avoids the ABI layer entirely.

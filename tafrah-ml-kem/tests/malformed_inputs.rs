@@ -12,9 +12,8 @@ fn test_ml_kem_encapsulate_rejects_short_public_key() {
     let mut rng = rand::rng();
     let (ek, _) = ml_kem_512::keygen(&mut rng);
 
-    let truncated_ek = EncapsulationKey {
-        bytes: ek.bytes[..ek.bytes.len() - 1].to_vec(),
-    };
+    let truncated_ek =
+        EncapsulationKey::from_bytes(ek.as_bytes()[..ek.as_bytes().len() - 1].to_vec());
 
     assert!(matches!(
         ml_kem_512::encapsulate(&truncated_ek, &mut rng),
@@ -28,20 +27,18 @@ fn test_ml_kem_decapsulate_implicit_rejects_short_ciphertext() {
     let (ek, dk) = ml_kem_512::keygen(&mut rng);
     let (ct, _) = ml_kem_512::encapsulate(&ek, &mut rng).unwrap();
 
-    let truncated_ct = Ciphertext {
-        bytes: ct.bytes[..ct.bytes.len() - 1].to_vec(),
-    };
+    let truncated_ct = Ciphertext::from_bytes(ct.as_bytes()[..ct.as_bytes().len() - 1].to_vec());
 
-    let z = &dk.bytes[dk.bytes.len() - 32..];
+    let z = &dk.as_bytes()[dk.as_bytes().len() - 32..];
     let mut j = Shake256::default();
     j.update(z);
-    j.update(&truncated_ct.bytes);
+    j.update(truncated_ct.as_bytes());
     let mut reader = j.finalize_xof();
     let mut expected = [0u8; 32];
     reader.read(&mut expected);
 
     let ss = ml_kem_512::decapsulate(&dk, &truncated_ct).unwrap();
-    assert_eq!(ss.bytes, expected);
+    assert_eq!(ss.as_bytes(), expected);
 }
 
 #[test]
@@ -50,9 +47,8 @@ fn test_ml_kem_decapsulate_rejects_short_secret_key() {
     let (ek, dk) = ml_kem_512::keygen(&mut rng);
     let (ct, _) = ml_kem_512::encapsulate(&ek, &mut rng).unwrap();
 
-    let truncated_dk = DecapsulationKey {
-        bytes: dk.bytes[..dk.bytes.len() - 1].to_vec(),
-    };
+    let truncated_dk =
+        DecapsulationKey::from_bytes(dk.as_bytes()[..dk.as_bytes().len() - 1].to_vec());
 
     assert!(matches!(
         ml_kem_512::decapsulate(&truncated_dk, &ct),

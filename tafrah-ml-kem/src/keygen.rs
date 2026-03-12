@@ -30,6 +30,7 @@ pub fn k_pke_keygen(d: &[u8; 32], params: &Params) -> Result<(Vec<u8>, Vec<u8>),
     g_input[32] = k as u8;
 
     let g_output = Sha3_512::digest(&g_input);
+    // SHA3-512 always returns 64 bytes, so these fixed-size splits are exact.
     let rho: [u8; 32] = g_output[..32].try_into().unwrap();
     let sigma: [u8; 32] = g_output[32..64].try_into().unwrap();
 

@@ -10,6 +10,8 @@ This directory contains user-facing and technical documentation for the Tafrah w
 - [uniffi.md](uniffi.md)
 - [api-overview.md](api-overview.md)
 - [ecosystem.md](ecosystem.md)
+- [performance.md](performance.md)
+- [security.md](security.md)
 
 ## Language Guides
 

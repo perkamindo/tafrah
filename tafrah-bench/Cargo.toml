@@ -1,0 +1,15 @@
+[package]
+name = "tafrah-bench"
+version = "0.1.7"
+edition = "2021"
+publish = false
+
+[features]
+default = []
+avx2 = ["tafrah-math/avx2"]
+neon = ["tafrah-math/neon"]
+
+[dependencies]
+rand = { workspace = true }
+tafrah = { path = "../tafrah", features = ["std", "ml-kem", "ml-dsa", "slh-dsa", "falcon", "hqc"] }
+tafrah-math = { path = "../tafrah-math", features = ["std"] }

@@ -19,18 +19,63 @@ extern "C" {
 const char *tafrah_version(void);
 const char *tafrah_status_string(int status);
 
+size_t tafrah_ml_kem_512_ek_size(void);
+size_t tafrah_ml_kem_512_dk_size(void);
+size_t tafrah_ml_kem_512_ct_size(void);
 size_t tafrah_ml_kem_768_ek_size(void);
 size_t tafrah_ml_kem_768_dk_size(void);
 size_t tafrah_ml_kem_768_ct_size(void);
+size_t tafrah_ml_kem_1024_ek_size(void);
+size_t tafrah_ml_kem_1024_dk_size(void);
+size_t tafrah_ml_kem_1024_ct_size(void);
 size_t tafrah_shared_secret_size(void);
 
+size_t tafrah_ml_dsa_44_vk_size(void);
+size_t tafrah_ml_dsa_44_sk_size(void);
+size_t tafrah_ml_dsa_44_sig_size(void);
 size_t tafrah_ml_dsa_65_vk_size(void);
 size_t tafrah_ml_dsa_65_sk_size(void);
 size_t tafrah_ml_dsa_65_sig_size(void);
+size_t tafrah_ml_dsa_87_vk_size(void);
+size_t tafrah_ml_dsa_87_sk_size(void);
+size_t tafrah_ml_dsa_87_sig_size(void);
 
+size_t tafrah_slh_dsa_sha2_128s_vk_size(void);
+size_t tafrah_slh_dsa_sha2_128s_sk_size(void);
+size_t tafrah_slh_dsa_sha2_128s_sig_size(void);
+size_t tafrah_slh_dsa_sha2_128f_vk_size(void);
+size_t tafrah_slh_dsa_sha2_128f_sk_size(void);
+size_t tafrah_slh_dsa_sha2_128f_sig_size(void);
+size_t tafrah_slh_dsa_sha2_192s_vk_size(void);
+size_t tafrah_slh_dsa_sha2_192s_sk_size(void);
+size_t tafrah_slh_dsa_sha2_192s_sig_size(void);
+size_t tafrah_slh_dsa_sha2_192f_vk_size(void);
+size_t tafrah_slh_dsa_sha2_192f_sk_size(void);
+size_t tafrah_slh_dsa_sha2_192f_sig_size(void);
+size_t tafrah_slh_dsa_sha2_256s_vk_size(void);
+size_t tafrah_slh_dsa_sha2_256s_sk_size(void);
+size_t tafrah_slh_dsa_sha2_256s_sig_size(void);
+size_t tafrah_slh_dsa_sha2_256f_vk_size(void);
+size_t tafrah_slh_dsa_sha2_256f_sk_size(void);
+size_t tafrah_slh_dsa_sha2_256f_sig_size(void);
+size_t tafrah_slh_dsa_shake_128s_vk_size(void);
+size_t tafrah_slh_dsa_shake_128s_sk_size(void);
+size_t tafrah_slh_dsa_shake_128s_sig_size(void);
 size_t tafrah_slh_dsa_shake_128f_vk_size(void);
 size_t tafrah_slh_dsa_shake_128f_sk_size(void);
 size_t tafrah_slh_dsa_shake_128f_sig_size(void);
+size_t tafrah_slh_dsa_shake_192s_vk_size(void);
+size_t tafrah_slh_dsa_shake_192s_sk_size(void);
+size_t tafrah_slh_dsa_shake_192s_sig_size(void);
+size_t tafrah_slh_dsa_shake_192f_vk_size(void);
+size_t tafrah_slh_dsa_shake_192f_sk_size(void);
+size_t tafrah_slh_dsa_shake_192f_sig_size(void);
+size_t tafrah_slh_dsa_shake_256s_vk_size(void);
+size_t tafrah_slh_dsa_shake_256s_sk_size(void);
+size_t tafrah_slh_dsa_shake_256s_sig_size(void);
+size_t tafrah_slh_dsa_shake_256f_vk_size(void);
+size_t tafrah_slh_dsa_shake_256f_sk_size(void);
+size_t tafrah_slh_dsa_shake_256f_sig_size(void);
 
 size_t tafrah_falcon_512_vk_size(void);
 size_t tafrah_falcon_512_sk_size(void);
@@ -55,6 +100,14 @@ size_t tafrah_hqc_256_dk_size(void);
 size_t tafrah_hqc_256_ct_size(void);
 size_t tafrah_hqc_256_ss_size(void);
 
+int tafrah_ml_kem_512_keygen(uint8_t *ek_out, size_t ek_len,
+                             uint8_t *dk_out, size_t dk_len);
+int tafrah_ml_kem_512_encapsulate(const uint8_t *ek_ptr, size_t ek_len,
+                                  uint8_t *ct_out, size_t ct_len,
+                                  uint8_t *ss_out, size_t ss_len);
+int tafrah_ml_kem_512_decapsulate(const uint8_t *dk_ptr, size_t dk_len,
+                                  const uint8_t *ct_ptr, size_t ct_len,
+                                  uint8_t *ss_out, size_t ss_len);
 int tafrah_ml_kem_768_keygen(uint8_t *ek_out, size_t ek_len,
                              uint8_t *dk_out, size_t dk_len);
 int tafrah_ml_kem_768_encapsulate(const uint8_t *ek_ptr, size_t ek_len,
@@ -63,7 +116,23 @@ int tafrah_ml_kem_768_encapsulate(const uint8_t *ek_ptr, size_t ek_len,
 int tafrah_ml_kem_768_decapsulate(const uint8_t *dk_ptr, size_t dk_len,
                                   const uint8_t *ct_ptr, size_t ct_len,
                                   uint8_t *ss_out, size_t ss_len);
+int tafrah_ml_kem_1024_keygen(uint8_t *ek_out, size_t ek_len,
+                              uint8_t *dk_out, size_t dk_len);
+int tafrah_ml_kem_1024_encapsulate(const uint8_t *ek_ptr, size_t ek_len,
+                                   uint8_t *ct_out, size_t ct_len,
+                                   uint8_t *ss_out, size_t ss_len);
+int tafrah_ml_kem_1024_decapsulate(const uint8_t *dk_ptr, size_t dk_len,
+                                   const uint8_t *ct_ptr, size_t ct_len,
+                                   uint8_t *ss_out, size_t ss_len);
 
+int tafrah_ml_dsa_44_keygen(uint8_t *vk_out, size_t vk_len,
+                            uint8_t *sk_out, size_t sk_len);
+int tafrah_ml_dsa_44_sign(const uint8_t *sk_ptr, size_t sk_len,
+                          const uint8_t *msg_ptr, size_t msg_len,
+                          uint8_t *sig_out, size_t sig_len);
+int tafrah_ml_dsa_44_verify(const uint8_t *vk_ptr, size_t vk_len,
+                            const uint8_t *msg_ptr, size_t msg_len,
+                            const uint8_t *sig_ptr, size_t sig_len);
 int tafrah_ml_dsa_65_keygen(uint8_t *vk_out, size_t vk_len,
                             uint8_t *sk_out, size_t sk_len);
 int tafrah_ml_dsa_65_sign(const uint8_t *sk_ptr, size_t sk_len,
@@ -72,13 +141,109 @@ int tafrah_ml_dsa_65_sign(const uint8_t *sk_ptr, size_t sk_len,
 int tafrah_ml_dsa_65_verify(const uint8_t *vk_ptr, size_t vk_len,
                             const uint8_t *msg_ptr, size_t msg_len,
                             const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_ml_dsa_87_keygen(uint8_t *vk_out, size_t vk_len,
+                            uint8_t *sk_out, size_t sk_len);
+int tafrah_ml_dsa_87_sign(const uint8_t *sk_ptr, size_t sk_len,
+                          const uint8_t *msg_ptr, size_t msg_len,
+                          uint8_t *sig_out, size_t sig_len);
+int tafrah_ml_dsa_87_verify(const uint8_t *vk_ptr, size_t vk_len,
+                            const uint8_t *msg_ptr, size_t msg_len,
+                            const uint8_t *sig_ptr, size_t sig_len);
 
+int tafrah_slh_dsa_sha2_128s_keygen(uint8_t *vk_out, size_t vk_len,
+                                    uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_sha2_128s_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                  const uint8_t *msg_ptr, size_t msg_len,
+                                  uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_sha2_128s_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                    const uint8_t *msg_ptr, size_t msg_len,
+                                    const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_sha2_128f_keygen(uint8_t *vk_out, size_t vk_len,
+                                    uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_sha2_128f_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                  const uint8_t *msg_ptr, size_t msg_len,
+                                  uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_sha2_128f_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                    const uint8_t *msg_ptr, size_t msg_len,
+                                    const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_sha2_192s_keygen(uint8_t *vk_out, size_t vk_len,
+                                    uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_sha2_192s_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                  const uint8_t *msg_ptr, size_t msg_len,
+                                  uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_sha2_192s_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                    const uint8_t *msg_ptr, size_t msg_len,
+                                    const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_sha2_192f_keygen(uint8_t *vk_out, size_t vk_len,
+                                    uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_sha2_192f_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                  const uint8_t *msg_ptr, size_t msg_len,
+                                  uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_sha2_192f_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                    const uint8_t *msg_ptr, size_t msg_len,
+                                    const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_sha2_256s_keygen(uint8_t *vk_out, size_t vk_len,
+                                    uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_sha2_256s_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                  const uint8_t *msg_ptr, size_t msg_len,
+                                  uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_sha2_256s_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                    const uint8_t *msg_ptr, size_t msg_len,
+                                    const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_sha2_256f_keygen(uint8_t *vk_out, size_t vk_len,
+                                    uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_sha2_256f_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                  const uint8_t *msg_ptr, size_t msg_len,
+                                  uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_sha2_256f_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                    const uint8_t *msg_ptr, size_t msg_len,
+                                    const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_shake_128s_keygen(uint8_t *vk_out, size_t vk_len,
+                                     uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_shake_128s_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                   const uint8_t *msg_ptr, size_t msg_len,
+                                   uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_shake_128s_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                     const uint8_t *msg_ptr, size_t msg_len,
+                                     const uint8_t *sig_ptr, size_t sig_len);
 int tafrah_slh_dsa_shake_128f_keygen(uint8_t *vk_out, size_t vk_len,
                                      uint8_t *sk_out, size_t sk_len);
 int tafrah_slh_dsa_shake_128f_sign(const uint8_t *sk_ptr, size_t sk_len,
                                    const uint8_t *msg_ptr, size_t msg_len,
                                    uint8_t *sig_out, size_t sig_len);
 int tafrah_slh_dsa_shake_128f_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                     const uint8_t *msg_ptr, size_t msg_len,
+                                     const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_shake_192s_keygen(uint8_t *vk_out, size_t vk_len,
+                                     uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_shake_192s_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                   const uint8_t *msg_ptr, size_t msg_len,
+                                   uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_shake_192s_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                     const uint8_t *msg_ptr, size_t msg_len,
+                                     const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_shake_192f_keygen(uint8_t *vk_out, size_t vk_len,
+                                     uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_shake_192f_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                   const uint8_t *msg_ptr, size_t msg_len,
+                                   uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_shake_192f_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                     const uint8_t *msg_ptr, size_t msg_len,
+                                     const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_shake_256s_keygen(uint8_t *vk_out, size_t vk_len,
+                                     uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_shake_256s_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                   const uint8_t *msg_ptr, size_t msg_len,
+                                   uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_shake_256s_verify(const uint8_t *vk_ptr, size_t vk_len,
+                                     const uint8_t *msg_ptr, size_t msg_len,
+                                     const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_shake_256f_keygen(uint8_t *vk_out, size_t vk_len,
+                                     uint8_t *sk_out, size_t sk_len);
+int tafrah_slh_dsa_shake_256f_sign(const uint8_t *sk_ptr, size_t sk_len,
+                                   const uint8_t *msg_ptr, size_t msg_len,
+                                   uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_shake_256f_verify(const uint8_t *vk_ptr, size_t vk_len,
                                      const uint8_t *msg_ptr, size_t msg_len,
                                      const uint8_t *sig_ptr, size_t sig_len);
 

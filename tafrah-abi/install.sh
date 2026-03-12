@@ -37,7 +37,7 @@ cp "$SCRIPT_DIR/../target/release/$LIB_NAME" "$PREFIX/lib/$LEGACY_LIB_NAME"
 
 sed \
   -e "s#@PREFIX@#$PREFIX#g" \
-  -e "s#@VERSION@#0.1.6#g" \
+  -e "s#@VERSION@#0.1.7#g" \
   "$SCRIPT_DIR/pkgconfig/tafrah.pc.in" > "$PREFIX/lib/pkgconfig/tafrah.pc"
 
 printf 'Installed tafrah-abi to %s\n' "$PREFIX"

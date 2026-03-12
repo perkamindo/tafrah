@@ -218,12 +218,8 @@ fn test_reference_falcon_verify_kats() {
             let msg = hex_decode(field(&entry, "msg"));
             let sm = hex_decode(field(&entry, "sm"));
             let msg_len = field(&entry, "mlen").parse::<usize>().unwrap();
-            let vk = VerifyingKey {
-                bytes: hex_decode(field(&entry, "pk")),
-            };
-            let sig = Signature {
-                bytes: detached_signature_from_nist_attached(&sm, msg_len),
-            };
+            let vk = VerifyingKey::from_bytes(hex_decode(field(&entry, "pk")));
+            let sig = Signature::from_bytes(detached_signature_from_nist_attached(&sm, msg_len));
 
             tafrah_falcon::verify::falcon_verify(&vk, &msg, &sig, params).unwrap_or_else(|err| {
                 panic!(
@@ -265,9 +261,7 @@ fn test_reference_falcon_derive_public_from_secret_key() {
 
         for entry in entries {
             let count = field(&entry, "count");
-            let sk = SigningKey {
-                bytes: hex_decode(field(&entry, "sk")),
-            };
+            let sk = SigningKey::from_bytes(hex_decode(field(&entry, "sk")));
             let expected = hex_decode(field(&entry, "pk"));
             let derived = match params.log_n {
                 9 => tafrah_falcon::falcon_512::derive_verifying_key(&sk),
@@ -282,7 +276,8 @@ fn test_reference_falcon_derive_public_from_secret_key() {
             });
 
             assert_eq!(
-                derived.bytes, expected,
+                derived.as_bytes(),
+                expected.as_slice(),
                 "{} count={count}: derived public key mismatch",
                 params.alg_name
             );
@@ -321,12 +316,8 @@ fn test_reference_falcon_sign_roundtrip_with_reference_keys() {
         for entry in entries.iter().take(2) {
             let count = field(entry, "count");
             let msg = hex_decode(field(entry, "msg"));
-            let sk = SigningKey {
-                bytes: hex_decode(field(entry, "sk")),
-            };
-            let vk = VerifyingKey {
-                bytes: hex_decode(field(entry, "pk")),
-            };
+            let sk = SigningKey::from_bytes(hex_decode(field(entry, "sk")));
+            let vk = VerifyingKey::from_bytes(hex_decode(field(entry, "pk")));
             let mut seed = [0u8; 32];
             seed[0] = params.log_n as u8;
             seed[1] = count.parse::<u8>().unwrap_or(0);
@@ -345,7 +336,7 @@ fn test_reference_falcon_sign_roundtrip_with_reference_keys() {
             });
 
             assert!(
-                sig.bytes.len() <= params.sig_max_bytes,
+                sig.as_bytes().len() <= params.sig_max_bytes,
                 "{} count={count}: detached signature exceeds max size",
                 params.alg_name
             );
@@ -430,12 +421,14 @@ fn test_reference_falcon_deterministic_kat_parity_all_counts() {
             });
 
             assert_eq!(
-                vk.bytes, expected_pk,
+                vk.as_bytes(),
+                expected_pk.as_slice(),
                 "{} count={count}: deterministic public key mismatch",
                 params.alg_name
             );
             assert_eq!(
-                sk.bytes, expected_sk,
+                sk.as_bytes(),
+                expected_sk.as_slice(),
                 "{} count={count}: deterministic secret key mismatch",
                 params.alg_name
             );
@@ -452,7 +445,7 @@ fn test_reference_falcon_deterministic_kat_parity_all_counts() {
                 )
             });
 
-            let attached = nist_attached_signature_from_detached(&sig.bytes, &msg);
+            let attached = nist_attached_signature_from_detached(sig.as_bytes(), &msg);
             assert_eq!(
                 attached.len(),
                 expected_smlen,
@@ -470,27 +463,13 @@ fn test_reference_falcon_deterministic_kat_parity_all_counts() {
 
 #[test]
 fn test_falcon_shell_rejects_malformed_inputs_without_panicking() {
-    let short_vk = VerifyingKey {
-        bytes: vec![0u8; FALCON_512.pk_bytes - 1],
-    };
-    let short_sk = SigningKey {
-        bytes: vec![0u8; FALCON_512.sk_bytes - 1],
-    };
-    let short_sig = Signature {
-        bytes: vec![0u8; 42],
-    };
-    let oversized_sig = Signature {
-        bytes: vec![0u8; FALCON_512.sig_max_bytes + 1],
-    };
-    let well_sized_vk = VerifyingKey {
-        bytes: vec![0u8; FALCON_512.pk_bytes],
-    };
-    let well_sized_sk = SigningKey {
-        bytes: vec![0u8; FALCON_512.sk_bytes],
-    };
-    let malformed_sig = Signature {
-        bytes: vec![0x42; 43],
-    };
+    let short_vk = VerifyingKey::from_bytes(vec![0u8; FALCON_512.pk_bytes - 1]);
+    let short_sk = SigningKey::from_bytes(vec![0u8; FALCON_512.sk_bytes - 1]);
+    let short_sig = Signature::from_bytes(vec![0u8; 42]);
+    let oversized_sig = Signature::from_bytes(vec![0u8; FALCON_512.sig_max_bytes + 1]);
+    let well_sized_vk = VerifyingKey::from_bytes(vec![0u8; FALCON_512.pk_bytes]);
+    let well_sized_sk = SigningKey::from_bytes(vec![0u8; FALCON_512.sk_bytes]);
+    let malformed_sig = Signature::from_bytes(vec![0x42; 43]);
     let mut rng = rand::rng();
 
     assert!(matches!(
@@ -533,15 +512,9 @@ fn test_falcon_generic_api_rejects_invalid_params() {
     invalid.sig_max_bytes -= 1;
 
     let mut rng = rand::rng();
-    let dummy_vk = VerifyingKey {
-        bytes: vec![0u8; FALCON_512.pk_bytes],
-    };
-    let dummy_sk = SigningKey {
-        bytes: vec![0u8; FALCON_512.sk_bytes],
-    };
-    let dummy_sig = Signature {
-        bytes: vec![0u8; 43],
-    };
+    let dummy_vk = VerifyingKey::from_bytes(vec![0u8; FALCON_512.pk_bytes]);
+    let dummy_sk = SigningKey::from_bytes(vec![0u8; FALCON_512.sk_bytes]);
+    let dummy_sig = Signature::from_bytes(vec![0u8; 43]);
 
     assert!(matches!(
         tafrah_falcon::keygen::falcon_keygen(&mut rng, &invalid),

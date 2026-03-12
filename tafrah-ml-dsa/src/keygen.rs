@@ -14,6 +14,7 @@ use crate::hint;
 use crate::params::Params;
 use crate::types::{SigningKey, VerifyingKey};
 use tafrah_traits::Error;
+use zeroize::Zeroize;
 
 fn ml_dsa_keygen_from_seed(
     seed: &[u8; 32],
@@ -137,10 +138,28 @@ fn ml_dsa_keygen_from_seed(
         sk_bytes.extend_from_slice(&encode::pack_t0(p));
     }
 
-    Ok((
+    let result = (
         VerifyingKey { bytes: pk_bytes },
         SigningKey { bytes: sk_bytes },
-    ))
+    );
+
+    key_k.zeroize();
+    rho_prime.zeroize();
+    for poly in &mut s1 {
+        poly.zeroize();
+    }
+    for poly in &mut s2 {
+        poly.zeroize();
+    }
+    for poly in &mut s1_hat {
+        poly.zeroize();
+    }
+    for poly in &mut t0 {
+        poly.zeroize();
+    }
+    tr.zeroize();
+
+    Ok(result)
 }
 
 /// Generates an ML-DSA verifying key and signing key pair.

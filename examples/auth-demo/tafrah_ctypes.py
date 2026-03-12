@@ -21,9 +21,16 @@ class TafrahABI:
 
     def __init__(self, library_path: Path | None = None, auto_build: bool = True) -> None:
         self._workspace_root = Path(__file__).resolve().parents[2]
-        self._library_path = Path(library_path) if library_path else self.default_library_path()
-        if auto_build and not self._library_path.exists():
+        install_prefix = os.environ.get("TAFRAH_INSTALL_PREFIX")
+        explicit_library_path = library_path is not None
+        self._library_path = Path(library_path) if explicit_library_path else self.default_library_path()
+        if auto_build and not explicit_library_path and not install_prefix:
+            # Repo-local proof runs should not silently reuse a stale ABI build.
             self.build_native()
+            self._library_path = self.default_library_path()
+        elif auto_build and not self._library_path.exists():
+            self.build_native()
+            self._library_path = self.default_library_path()
         self._lib = ctypes.CDLL(str(self._library_path))
         self._bind()
 

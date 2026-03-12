@@ -7,7 +7,8 @@ fn test_ml_kem_512_roundtrip() {
     let (ct, ss1) = tafrah_ml_kem::ml_kem_512::encapsulate(&ek, &mut rng).unwrap();
     let ss2 = tafrah_ml_kem::ml_kem_512::decapsulate(&dk, &ct).unwrap();
     assert_eq!(
-        ss1.bytes, ss2.bytes,
+        ss1.as_bytes(),
+        ss2.as_bytes(),
         "ML-KEM-512: shared secrets must match"
     );
 }
@@ -19,7 +20,8 @@ fn test_ml_kem_768_roundtrip() {
     let (ct, ss1) = tafrah_ml_kem::ml_kem_768::encapsulate(&ek, &mut rng).unwrap();
     let ss2 = tafrah_ml_kem::ml_kem_768::decapsulate(&dk, &ct).unwrap();
     assert_eq!(
-        ss1.bytes, ss2.bytes,
+        ss1.as_bytes(),
+        ss2.as_bytes(),
         "ML-KEM-768: shared secrets must match"
     );
 }
@@ -31,7 +33,8 @@ fn test_ml_kem_1024_roundtrip() {
     let (ct, ss1) = tafrah_ml_kem::ml_kem_1024::encapsulate(&ek, &mut rng).unwrap();
     let ss2 = tafrah_ml_kem::ml_kem_1024::decapsulate(&dk, &ct).unwrap();
     assert_eq!(
-        ss1.bytes, ss2.bytes,
+        ss1.as_bytes(),
+        ss2.as_bytes(),
         "ML-KEM-1024: shared secrets must match"
     );
 }
@@ -44,6 +47,6 @@ fn test_ml_kem_512_multiple_roundtrips() {
     for _ in 0..5 {
         let (ct, ss1) = tafrah_ml_kem::ml_kem_512::encapsulate(&ek, &mut rng).unwrap();
         let ss2 = tafrah_ml_kem::ml_kem_512::decapsulate(&dk, &ct).unwrap();
-        assert_eq!(ss1.bytes, ss2.bytes);
+        assert_eq!(ss1.as_bytes(), ss2.as_bytes());
     }
 }

@@ -6,11 +6,9 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tafrah_ml_dsa::keygen::ml_dsa_keygen_internal;
-use tafrah_ml_dsa::params::{ML_DSA_44, ML_DSA_65, ML_DSA_87, Params};
+use tafrah_ml_dsa::params::{Params, ML_DSA_44, ML_DSA_65, ML_DSA_87};
 use tafrah_ml_dsa::prehash::{shake256_prehash, PreHashAlgorithm};
-use tafrah_ml_dsa::sign::{
-    ml_dsa_sign_internal, ml_dsa_sign_prehash_internal, ML_DSA_RNDBYTES,
-};
+use tafrah_ml_dsa::sign::{ml_dsa_sign_internal, ml_dsa_sign_prehash_internal, ML_DSA_RNDBYTES};
 use tafrah_ml_dsa::types::{Signature, SignedMessage};
 use tafrah_ml_dsa::verify::{ml_dsa_open_signed_message_with_context, ml_dsa_verify_with_context};
 
@@ -34,7 +32,9 @@ fn maybe_mldsa_native_root() -> Option<PathBuf> {
         PathBuf::from("/tmp/mldsa-native-audit"),
     ];
 
-    candidates.into_iter().find(|path| path.join("mldsa").join("mldsa_native.c").exists())
+    candidates
+        .into_iter()
+        .find(|path| path.join("mldsa").join("mldsa_native.c").exists())
 }
 
 fn unique_temp_dir(prefix: &str) -> PathBuf {
@@ -121,11 +121,7 @@ fn build_mldsa_native_oracle(mode: u8, out_dir: &Path, repo_root: &Path) -> Path
     binary
 }
 
-fn run_mldsa_native_oracle(
-    binary: &Path,
-    work_dir: &Path,
-    counts: &[u32],
-) -> std::process::Output {
+fn run_mldsa_native_oracle(binary: &Path, work_dir: &Path, counts: &[u32]) -> std::process::Output {
     let mut command = Command::new(binary);
     command.current_dir(work_dir);
     for count in counts {
@@ -210,20 +206,26 @@ fn assert_mldsa_native_feature_parity(counts: &[u32]) {
                 expected_sig_pure.as_slice(),
                 "mode {mode} count={count}: pure signature mismatch"
             );
-            ml_dsa_verify_with_context(&vk, &msg, &pure_sig, &ctx, params)
-                .unwrap_or_else(|err| panic!("mode {mode} count={count}: pure verify failed: {err}"));
+            ml_dsa_verify_with_context(&vk, &msg, &pure_sig, &ctx, params).unwrap_or_else(|err| {
+                panic!("mode {mode} count={count}: pure verify failed: {err}")
+            });
 
-            let extmu_sig = ml_dsa_sign_internal(&sk, &mu, &[], &rnd, true, params)
-                .unwrap_or_else(|err| panic!("mode {mode} count={count}: extmu sign failed: {err}"));
+            let extmu_sig =
+                ml_dsa_sign_internal(&sk, &mu, &[], &rnd, true, params).unwrap_or_else(|err| {
+                    panic!("mode {mode} count={count}: extmu sign failed: {err}")
+                });
             assert_eq!(
                 extmu_sig.as_bytes(),
                 expected_sig_extmu.as_slice(),
                 "mode {mode} count={count}: extmu signature mismatch"
             );
-            ml_dsa_sign_internal(&sk, &mu, &[], &rnd, true, params)
-                .unwrap_or_else(|err| panic!("mode {mode} count={count}: extmu internal retry failed: {err}"));
+            ml_dsa_sign_internal(&sk, &mu, &[], &rnd, true, params).unwrap_or_else(|err| {
+                panic!("mode {mode} count={count}: extmu internal retry failed: {err}")
+            });
             tafrah_ml_dsa::verify::ml_dsa_verify_extmu(&vk, &mu, &extmu_sig, params)
-                .unwrap_or_else(|err| panic!("mode {mode} count={count}: extmu verify failed: {err}"));
+                .unwrap_or_else(|err| {
+                    panic!("mode {mode} count={count}: extmu verify failed: {err}")
+                });
 
             let prehash_sig = ml_dsa_sign_prehash_internal(
                 &sk,
@@ -247,7 +249,9 @@ fn assert_mldsa_native_feature_parity(counts: &[u32]) {
                 PreHashAlgorithm::Sha2_256,
                 params,
             )
-            .unwrap_or_else(|err| panic!("mode {mode} count={count}: prehash verify failed: {err}"));
+            .unwrap_or_else(|err| {
+                panic!("mode {mode} count={count}: prehash verify failed: {err}")
+            });
 
             let shake_digest = shake256_prehash(&msg);
             let shake_sig = ml_dsa_sign_prehash_internal(
@@ -258,19 +262,24 @@ fn assert_mldsa_native_feature_parity(counts: &[u32]) {
                 PreHashAlgorithm::Shake256,
                 params,
             )
-            .unwrap_or_else(|err| panic!("mode {mode} count={count}: shake256 prehash sign failed: {err}"));
+            .unwrap_or_else(|err| {
+                panic!("mode {mode} count={count}: shake256 prehash sign failed: {err}")
+            });
             assert_eq!(
                 shake_sig.as_bytes(),
                 expected_sig_prehash_shake256.as_slice(),
                 "mode {mode} count={count}: shake256 prehash signature mismatch"
             );
-            tafrah_ml_dsa::verify::ml_dsa_verify_prehash_shake256(&vk, &msg, &shake_sig, &ctx, params).unwrap_or_else(
-                |err| panic!("mode {mode} count={count}: shake256 prehash verify failed: {err}"),
-            );
+            tafrah_ml_dsa::verify::ml_dsa_verify_prehash_shake256(
+                &vk, &msg, &shake_sig, &ctx, params,
+            )
+            .unwrap_or_else(|err| {
+                panic!("mode {mode} count={count}: shake256 prehash verify failed: {err}")
+            });
 
             let mut signed_bytes = pure_sig.as_bytes().to_vec();
             signed_bytes.extend_from_slice(&msg);
-            let signed = SignedMessage { bytes: signed_bytes };
+            let signed = SignedMessage::from_bytes(signed_bytes);
             assert_eq!(
                 &signed.as_bytes()[..params.sig_size()],
                 expected_sig_pure.as_slice(),
@@ -290,9 +299,7 @@ fn assert_mldsa_native_feature_parity(counts: &[u32]) {
                 "mode {mode} count={count}: opened message mismatch"
             );
 
-            let helper_sig = Signature {
-                bytes: expected_sig_pure.clone(),
-            };
+            let helper_sig = Signature::from_bytes(expected_sig_pure.clone());
             ml_dsa_verify_with_context(&vk, &msg, &helper_sig, &ctx, params).unwrap();
         }
 
