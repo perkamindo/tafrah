@@ -22,15 +22,17 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
+          - windows-latest
 
     steps:
       - uses: actions/checkout@v4
 
       - name: setup-rust
-        run: sh ./scripts/setup-rust.sh
+        shell: bash
+        run: bash ./scripts/setup-rust.sh
 
-      - name: make-test
-        run: make test
+      - name: cargo-test
+        run: cargo test
 
   package:
     name: package-${{ matrix.id }}
@@ -44,35 +46,49 @@ jobs:
             os: ubuntu-latest
             abi_lib: libtafrah_abi.so
             uniffi_lib: libtafrah_uniffi.so
+            archive_ext: tar.gz
           - id: macos
             os: macos-latest
             abi_lib: libtafrah_abi.dylib
             uniffi_lib: libtafrah_uniffi.dylib
+            archive_ext: tar.gz
+          - id: windows
+            os: windows-latest
+            abi_lib: tafrah_abi.dll
+            uniffi_lib: tafrah_uniffi.dll
+            archive_ext: zip
 
     steps:
       - uses: actions/checkout@v4
 
       - name: setup-rust
-        run: sh ./scripts/setup-rust.sh
+        shell: bash
+        run: bash ./scripts/setup-rust.sh
 
       - name: build-release-libs
+        shell: bash
         run: |
-          make build-abi
-          make build-uniffi
+          set -euo pipefail
+          cargo build -p tafrah-abi --release
+          cargo build -p tafrah-uniffi --release
 
       - name: assemble-install-layout
         shell: bash
         run: |
           set -euo pipefail
-          make install PREFIX="$PWD/dist/install"
+          bash ./scripts/install-abi.sh "$PWD/dist/install"
           test -f "dist/install/lib/${{ matrix.abi_lib }}"
           cp "target/release/${{ matrix.uniffi_lib }}" "dist/install/lib/"
-          tar -C dist -czf "tafrah-${{ github.ref_name }}-${{ matrix.id }}.tar.gz" install
+          if [ "${{ matrix.archive_ext }}" = "zip" ]; then
+            pwsh -NoLogo -NoProfile -Command "Compress-Archive -Path 'dist/install/*' -DestinationPath 'tafrah-${{ github.ref_name }}-${{ matrix.id }}.${{ matrix.archive_ext }}'"
+          else
+            tar -C dist -czf "tafrah-${{ github.ref_name }}-${{ matrix.id }}.${{ matrix.archive_ext }}" install
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.id }}
-          path: tafrah-${{ github.ref_name }}-${{ matrix.id }}.tar.gz
+          path: tafrah-${{ github.ref_name }}-${{ matrix.id }}.${{ matrix.archive_ext }}
 
   release:
     name: github-release
@@ -97,4 +113,6 @@ jobs:
           body_path: ${{ runner.temp }}/release-notes.md
           generate_release_notes: true
           append_body: true
-          files: tafrah-*.tar.gz
+          files: |
+            tafrah-*.tar.gz
+            tafrah-*.zip
