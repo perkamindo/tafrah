@@ -25,6 +25,7 @@
 //! See the repository `docs/` directory and `examples/auth-demo/rust/` for
 //! fuller usage examples.
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 pub use tafrah_traits as traits;
 

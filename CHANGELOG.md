@@ -2,6 +2,13 @@
 
 All notable changes to Tafrah are documented in this file.
 
+## [0.1.1] - 2026-03-12
+
+### Changed
+
+- Configured `tafrah` docs.rs builds to use all crate features so the umbrella documentation includes Falcon and HQC re-exports.
+- Enabled `docsrs` rustdoc configuration for clearer feature-gated API presentation in the umbrella crate documentation.
+
 ## [0.1.0] - 2026-03-12
 
 ### Highlights
