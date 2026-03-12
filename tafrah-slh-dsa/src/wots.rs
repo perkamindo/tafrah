@@ -29,14 +29,14 @@ fn chain(
 /// Algorithm 6 from FIPS 205
 pub fn wots_pkgen(sk_seed: &[u8], pk_seed: &[u8], adrs: &mut Adrs, params: &Params) -> Vec<u8> {
     let mut wots_pk_adrs = adrs.clone();
-    wots_pk_adrs.set_type(WOTS_PK);
+    wots_pk_adrs.set_type_and_clear_not_keypair(WOTS_PK);
     wots_pk_adrs.set_keypair_address(adrs.get_keypair_address());
 
     let mut tmp = Vec::with_capacity(params.len * params.n);
 
     for i in 0..params.len {
         let mut sk_adrs = adrs.clone();
-        sk_adrs.set_type(WOTS_PRF);
+        sk_adrs.set_type_and_clear(WOTS_PRF);
         sk_adrs.set_keypair_address(adrs.get_keypair_address());
         sk_adrs.set_chain_address(i as u32);
         sk_adrs.set_hash_address(0);
@@ -86,7 +86,7 @@ pub fn wots_sign(
         };
 
         let mut sk_adrs = adrs.clone();
-        sk_adrs.set_type(WOTS_PRF);
+        sk_adrs.set_type_and_clear(WOTS_PRF);
         sk_adrs.set_keypair_address(adrs.get_keypair_address());
         sk_adrs.set_chain_address(i as u32);
         sk_adrs.set_hash_address(0);
@@ -122,7 +122,7 @@ pub fn wots_pk_from_sig(
     let csum_base_w = base_w(&csum_bytes[4 - csum_len..], params.lg_w, params.len2);
 
     let mut wots_pk_adrs = adrs.clone();
-    wots_pk_adrs.set_type(WOTS_PK);
+    wots_pk_adrs.set_type_and_clear_not_keypair(WOTS_PK);
     wots_pk_adrs.set_keypair_address(adrs.get_keypair_address());
 
     let mut tmp = Vec::with_capacity(params.len * params.n);
@@ -198,7 +198,7 @@ mod tests {
         let mut adrs = Adrs::new();
         adrs.set_layer_address((SLH_DSA_SHA2_128F.d - 1) as u32);
         adrs.set_tree_address(0);
-        adrs.set_type(WOTS_HASH);
+        adrs.set_type_and_clear_not_keypair(WOTS_HASH);
         adrs.set_keypair_address(0);
 
         let leaf = wots_pkgen(sk_seed, pk_seed, &mut adrs, &SLH_DSA_SHA2_128F);

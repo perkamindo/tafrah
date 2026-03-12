@@ -18,7 +18,7 @@ fn wots_gen_leaf(
     let mut wots_adrs = Adrs::new();
     wots_adrs.set_layer_address(tree_adrs.get_layer_address());
     wots_adrs.set_tree_address(tree_adrs.get_tree_address());
-    wots_adrs.set_type(WOTS_HASH);
+    wots_adrs.set_type_and_clear_not_keypair(WOTS_HASH);
     wots_adrs.set_keypair_address(addr_idx);
     wots::wots_pkgen(sk_seed, pk_seed, &mut wots_adrs, params)
 }
@@ -37,7 +37,7 @@ fn treehash_with_auth(
     let mut heights = Vec::with_capacity((tree_height as usize) + 1);
     let mut auth_path = vec![0u8; tree_height as usize * n];
 
-    tree_adrs.set_type(TREE);
+    tree_adrs.set_type_and_clear(TREE);
 
     for idx in 0..(1u32 << tree_height) {
         let leaf = wots_gen_leaf(sk_seed, pk_seed, idx + idx_offset, tree_adrs, params);
@@ -106,12 +106,12 @@ pub fn xmss_sign(
     params: &Params,
 ) -> Vec<u8> {
     let mut wots_adrs = adrs.clone();
-    wots_adrs.set_type(WOTS_HASH);
+    wots_adrs.set_type_and_clear_not_keypair(WOTS_HASH);
     wots_adrs.set_keypair_address(idx);
     let sig_wots = wots::wots_sign(msg, sk_seed, pk_seed, &mut wots_adrs, params);
 
     let mut tree_adrs = adrs.clone();
-    tree_adrs.set_type(TREE);
+    tree_adrs.set_type_and_clear(TREE);
     let (_root, auth) =
         treehash_with_auth(sk_seed, pk_seed, idx, 0, params.hp as u32, &mut tree_adrs, params);
 
@@ -137,11 +137,11 @@ pub fn xmss_pk_from_sig(
     let auth = &sig[wots_sig_len..];
 
     let mut wots_adrs = adrs.clone();
-    wots_adrs.set_type(WOTS_HASH);
+    wots_adrs.set_type_and_clear_not_keypair(WOTS_HASH);
     wots_adrs.set_keypair_address(idx);
     let mut node = wots::wots_pk_from_sig(sig_wots, msg, pk_seed, &mut wots_adrs, params);
 
-    adrs.set_type(TREE);
+    adrs.set_type_and_clear(TREE);
     for j in 0..hp {
         adrs.set_tree_height((j + 1) as u32);
         let auth_node = &auth[j * params.n..(j + 1) * params.n];

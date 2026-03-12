@@ -6,7 +6,7 @@ Tafrah is split into layers so that production runtime code stays Rust-native, w
 
 - `tafrah-ml-kem`: FIPS 203
 - `tafrah-ml-dsa`: FIPS 204
-- `tafrah-slh-dsa`: FIPS 205
+- `tafrah-slh-dsa`: FIPS 205, including internal, pure/context, and HashSLH-DSA APIs
 - `tafrah-falcon`: FIPS 206
 - `tafrah-hqc`: FIPS 207
 

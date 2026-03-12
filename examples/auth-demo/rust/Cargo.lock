@@ -195,7 +195,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "tafrah-falcon",
  "tafrah-hqc",
@@ -269,7 +269,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-slh-dsa"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "hmac",
  "rand_core",

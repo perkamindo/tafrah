@@ -11,7 +11,7 @@ help:
 		'targets:' \
 		'  make test                 - run full workspace test suite' \
 		'  make test-reference       - run default reference oracle suite' \
-		'  make test-deep-slh        - run expensive current-reference SLH-DSA audit' \
+		'  make test-deep-slh        - run expensive FIPS 205 SPHINCS+ reference audit' \
 		'  make coverage             - run workspace coverage with cargo-llvm-cov' \
 		'  make build                - build workspace debug artifacts' \
 		'  make build-abi            - build release C ABI shared library' \
@@ -30,7 +30,7 @@ test-reference:
 	cargo test -p tafrah --test reference_kat
 
 test-deep-slh:
-	cargo test -p tafrah --test reference_kat test_reference_slh_dsa_sphincs_master_detkat_selected_deep_counts -- --ignored
+	cargo test -p tafrah --test fips205_reference test_fips205_selected_deep_counts --release -- --ignored
 
 coverage:
 	@command -v cargo-llvm-cov >/dev/null 2>&1 || { echo "cargo-llvm-cov is required. Install it with: cargo install cargo-llvm-cov --locked"; exit 1; }

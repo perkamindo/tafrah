@@ -68,11 +68,22 @@ impl Adrs {
         u64::from_be_bytes(self.bytes[8..16].try_into().unwrap())
     }
 
-    /// Sets the ADRS type field and clears the trailing type-specific words.
+    /// Sets the ADRS type field without altering type-specific payload words.
     pub fn set_type(&mut self, addr_type: u32) {
         self.set_u32(TYPE_OFFSET, addr_type);
-        // When setting type, zero out the rest per spec
+    }
+
+    /// Mirrors the FIPS 205 `ADRS.setTypeAndClear(Y)` behavior.
+    pub fn set_type_and_clear(&mut self, addr_type: u32) {
+        self.set_type(addr_type);
         self.bytes[20..32].fill(0);
+    }
+
+    /// Mirrors the SPHINCS+ / FIPS 205 type switch that preserves the key-pair
+    /// coordinate while clearing the chain/tree payload words.
+    pub fn set_type_and_clear_not_keypair(&mut self, addr_type: u32) {
+        self.set_type(addr_type);
+        self.bytes[24..32].fill(0);
     }
 
     /// Returns the ADRS type field.

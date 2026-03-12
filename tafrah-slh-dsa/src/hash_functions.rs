@@ -1,6 +1,7 @@
 /// Tweakable hash functions for SLH-DSA (FIPS 205)
 /// Supports both SHA2 and SHAKE variants
 extern crate alloc;
+use alloc::borrow::Cow;
 use alloc::vec;
 use alloc::vec::Vec;
 
@@ -9,6 +10,20 @@ use crate::params::{HashType, Params};
 
 use sha2::Digest;
 use sha3::digest::{ExtendableOutput, XofReader};
+
+fn contextual_message<'a>(msg: &'a [u8], ctx: Option<&'a [u8]>) -> Cow<'a, [u8]> {
+    match ctx {
+        Some(ctx) => {
+            let mut prefixed = Vec::with_capacity(2 + ctx.len() + msg.len());
+            prefixed.push(0);
+            prefixed.push(ctx.len() as u8);
+            prefixed.extend_from_slice(ctx);
+            prefixed.extend_from_slice(msg);
+            Cow::Owned(prefixed)
+        }
+        None => Cow::Borrowed(msg),
+    }
+}
 
 /// PRF: pseudorandom function
 /// SHAKE variant: SHAKE256(pk.seed || adrs || sk.seed)
@@ -44,13 +59,25 @@ pub fn prf(pk_seed: &[u8], sk_seed: &[u8], adrs: &Adrs, params: &Params) -> Vec<
 
 /// PRF_msg: PRF for message randomizer
 pub fn prf_msg(sk_prf: &[u8], opt_rand: &[u8], msg: &[u8], params: &Params) -> Vec<u8> {
+    prf_msg_with_context(sk_prf, opt_rand, msg, None, params)
+}
+
+/// PRF_msg with the pure-API context prefix from FIPS 205 Algorithms 22-25.
+pub fn prf_msg_with_context(
+    sk_prf: &[u8],
+    opt_rand: &[u8],
+    msg: &[u8],
+    ctx: Option<&[u8]>,
+    params: &Params,
+) -> Vec<u8> {
+    let message = contextual_message(msg, ctx);
     match params.hash_type {
         HashType::Shake => {
             use sha3::Shake256;
             let mut hasher = Shake256::default();
             sha3::digest::Update::update(&mut hasher, sk_prf);
             sha3::digest::Update::update(&mut hasher, opt_rand);
-            sha3::digest::Update::update(&mut hasher, msg);
+            sha3::digest::Update::update(&mut hasher, message.as_ref());
             let mut reader = hasher.finalize_xof();
             let mut out = vec![0u8; params.n];
             reader.read(&mut out);
@@ -64,7 +91,7 @@ pub fn prf_msg(sk_prf: &[u8], opt_rand: &[u8], msg: &[u8], params: &Params) -> V
                 type HmacSha512 = Hmac<Sha512>;
                 let mut mac = HmacSha512::new_from_slice(sk_prf).expect("HMAC key length");
                 hmac::Mac::update(&mut mac, opt_rand);
-                hmac::Mac::update(&mut mac, msg);
+                hmac::Mac::update(&mut mac, message.as_ref());
                 let result = mac.finalize().into_bytes();
                 result[..params.n].to_vec()
             } else {
@@ -72,7 +99,7 @@ pub fn prf_msg(sk_prf: &[u8], opt_rand: &[u8], msg: &[u8], params: &Params) -> V
                 type HmacSha256 = Hmac<Sha256>;
                 let mut mac = HmacSha256::new_from_slice(sk_prf).expect("HMAC key length");
                 hmac::Mac::update(&mut mac, opt_rand);
-                hmac::Mac::update(&mut mac, msg);
+                hmac::Mac::update(&mut mac, message.as_ref());
                 let result = mac.finalize().into_bytes();
                 result[..params.n].to_vec()
             }
@@ -141,6 +168,20 @@ pub fn hash_msg(
     m_bytes: usize,
     params: &Params,
 ) -> Vec<u8> {
+    hash_msg_with_context(r, pk_seed, pk_root, msg, None, m_bytes, params)
+}
+
+/// H_msg with the pure-API context prefix from FIPS 205 Algorithms 22-25.
+pub fn hash_msg_with_context(
+    r: &[u8],
+    pk_seed: &[u8],
+    pk_root: &[u8],
+    msg: &[u8],
+    ctx: Option<&[u8]>,
+    m_bytes: usize,
+    params: &Params,
+) -> Vec<u8> {
+    let message = contextual_message(msg, ctx);
     match params.hash_type {
         HashType::Shake => {
             use sha3::Shake256;
@@ -148,7 +189,7 @@ pub fn hash_msg(
             sha3::digest::Update::update(&mut hasher, r);
             sha3::digest::Update::update(&mut hasher, pk_seed);
             sha3::digest::Update::update(&mut hasher, pk_root);
-            sha3::digest::Update::update(&mut hasher, msg);
+            sha3::digest::Update::update(&mut hasher, message.as_ref());
             let mut reader = hasher.finalize_xof();
             let mut out = vec![0u8; m_bytes];
             reader.read(&mut out);
@@ -156,9 +197,9 @@ pub fn hash_msg(
         }
         HashType::Sha2 => {
             if params.n >= 24 {
-                mgf1_sha512_prefixed(r, pk_seed, pk_root, msg, m_bytes)
+                mgf1_sha512_prefixed(r, pk_seed, pk_root, message.as_ref(), m_bytes)
             } else {
-                mgf1_sha256_prefixed(r, pk_seed, pk_root, msg, m_bytes)
+                mgf1_sha256_prefixed(r, pk_seed, pk_root, message.as_ref(), m_bytes)
             }
         }
     }

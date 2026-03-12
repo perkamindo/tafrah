@@ -33,6 +33,25 @@ pub struct Params {
 }
 
 impl Params {
+    /// Returns the standard FIPS 205 algorithm identifier for this parameter set.
+    pub const fn alg_id(&self) -> Option<&'static str> {
+        match (self.n, self.h, self.d, self.a, self.k, self.hash_type) {
+            (16, 63, 7, 12, 14, HashType::Sha2) => Some("SLH-DSA-SHA2-128s"),
+            (16, 66, 22, 6, 33, HashType::Sha2) => Some("SLH-DSA-SHA2-128f"),
+            (24, 63, 7, 14, 17, HashType::Sha2) => Some("SLH-DSA-SHA2-192s"),
+            (24, 66, 22, 8, 33, HashType::Sha2) => Some("SLH-DSA-SHA2-192f"),
+            (32, 64, 8, 14, 22, HashType::Sha2) => Some("SLH-DSA-SHA2-256s"),
+            (32, 68, 17, 9, 35, HashType::Sha2) => Some("SLH-DSA-SHA2-256f"),
+            (16, 63, 7, 12, 14, HashType::Shake) => Some("SLH-DSA-SHAKE-128s"),
+            (16, 66, 22, 6, 33, HashType::Shake) => Some("SLH-DSA-SHAKE-128f"),
+            (24, 63, 7, 14, 17, HashType::Shake) => Some("SLH-DSA-SHAKE-192s"),
+            (24, 66, 22, 8, 33, HashType::Shake) => Some("SLH-DSA-SHAKE-192f"),
+            (32, 64, 8, 14, 22, HashType::Shake) => Some("SLH-DSA-SHAKE-256s"),
+            (32, 68, 17, 9, 35, HashType::Shake) => Some("SLH-DSA-SHAKE-256f"),
+            _ => None,
+        }
+    }
+
     /// Returns `true` if this parameter bundle matches one of the supported sets.
     pub const fn is_valid(&self) -> bool {
         matches!(
@@ -89,6 +108,15 @@ impl Params {
     #[allow(dead_code)]
     const fn compute_len(n: usize) -> usize {
         Self::compute_len1(n) + Self::compute_len2(n)
+    }
+
+    /// Returns the number of bytes produced by `H_msg`.
+    pub const fn message_digest_bytes(&self) -> usize {
+        let md_len = (self.k * self.a + 7) / 8;
+        let tree_bits = self.h - self.hp;
+        let tree_bytes = (tree_bits + 7) / 8;
+        let leaf_bytes = (self.hp + 7) / 8;
+        md_len + tree_bytes + leaf_bytes
     }
 }
 

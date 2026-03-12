@@ -34,6 +34,6 @@ tafrah-traits = { version = "0.1.0", path = "tafrah-traits" }
 tafrah-math = { version = "0.1.0", path = "tafrah-math" }
 tafrah-ml-kem = { version = "0.1.0", path = "tafrah-ml-kem" }
 tafrah-ml-dsa = { version = "0.1.0", path = "tafrah-ml-dsa" }
-tafrah-slh-dsa = { version = "0.1.0", path = "tafrah-slh-dsa" }
+tafrah-slh-dsa = { version = "0.1.1", path = "tafrah-slh-dsa" }
 tafrah-falcon = { version = "0.1.0", path = "tafrah-falcon" }
 tafrah-hqc = { version = "0.1.0", path = "tafrah-hqc" }

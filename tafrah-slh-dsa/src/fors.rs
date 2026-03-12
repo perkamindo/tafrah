@@ -18,7 +18,7 @@ fn fors_treehash(
     if height == 0 {
         // Leaf: PRF then F
         let mut sk_adrs = adrs.clone();
-        sk_adrs.set_type(FORS_PRF);
+        sk_adrs.set_type_and_clear(FORS_PRF);
         sk_adrs.set_keypair_address(adrs.get_keypair_address());
         sk_adrs.set_tree_height(0);
         sk_adrs.set_tree_index(start);
@@ -64,7 +64,7 @@ pub fn fors_sign(
 
         // Secret key value
         let mut sk_adrs = adrs.clone();
-        sk_adrs.set_type(FORS_PRF);
+        sk_adrs.set_type_and_clear(FORS_PRF);
         sk_adrs.set_keypair_address(adrs.get_keypair_address());
         sk_adrs.set_tree_height(0);
         sk_adrs.set_tree_index((i * (1 << a) + idx) as u32);
@@ -139,7 +139,7 @@ pub fn fors_pk_from_sig(
 
     // Compress roots into FORS public key
     let mut fors_pk_adrs = adrs.clone();
-    fors_pk_adrs.set_type(FORS_ROOTS);
+    fors_pk_adrs.set_type_and_clear_not_keypair(FORS_ROOTS);
     fors_pk_adrs.set_keypair_address(adrs.get_keypair_address());
 
     hash_functions::hash_t(pk_seed, &fors_pk_adrs, &roots, params)
@@ -148,19 +148,19 @@ pub fn fors_pk_from_sig(
 /// Split message digest into k a-bit indices
 fn message_to_indices(md: &[u8], k: usize, a: usize) -> Vec<usize> {
     let mut indices = Vec::with_capacity(k);
-    let mut bit_offset = 0usize;
+    let mut byte_idx = 0usize;
+    let mut bits_available = 0usize;
+    let mut accumulator = 0usize;
+    let mask = (1usize << a) - 1;
 
     for _ in 0..k {
-        let mut idx = 0usize;
-        for b in 0..a {
-            let byte_idx = bit_offset / 8;
-            let bit_idx = bit_offset % 8;
-            if byte_idx < md.len() {
-                idx |= (((md[byte_idx] >> bit_idx) & 1) as usize) << b;
-            }
-            bit_offset += 1;
+        while bits_available < a {
+            accumulator = (accumulator << 8) | md.get(byte_idx).copied().unwrap_or(0) as usize;
+            byte_idx += 1;
+            bits_available += 8;
         }
-        indices.push(idx);
+        bits_available -= a;
+        indices.push((accumulator >> bits_available) & mask);
     }
     indices
 }

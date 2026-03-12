@@ -34,11 +34,18 @@ Fixed-parameter convenience modules expose the most common operations:
 - Falcon: `falcon_512`, `falcon_1024`
 - HQC: `hqc_128`, `hqc_192`, `hqc_256`
 
-SLH-DSA currently exposes parameter bundles plus generic entry points:
+SLH-DSA exposes parameter bundles plus the full FIPS 205 generic surface:
 
 - `keygen::slh_dsa_keygen`
+- `keygen::slh_keygen_internal`
 - `sign::slh_dsa_sign`
+- `sign::slh_sign_internal`
+- `sign::slh_sign`
 - `verify::slh_dsa_verify`
+- `verify::slh_verify_internal`
+- `verify::slh_verify`
+- `prehash::hash_slh_sign`
+- `prehash::hash_slh_verify`
 - constants such as `params::SLH_DSA_SHAKE_128F`
 
 ## Typical Types

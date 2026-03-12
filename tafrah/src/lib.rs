@@ -59,7 +59,7 @@
 //! For example:
 //!
 //! ```toml
-//! tafrah = { version = "0.1.2", features = ["falcon", "hqc"] }
+//! tafrah = { version = "0.1.5", features = ["falcon", "hqc"] }
 //! ```
 //!
 //! ## Quick start: ML-KEM

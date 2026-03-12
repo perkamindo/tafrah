@@ -2,6 +2,23 @@
 
 All notable changes to Tafrah are documented in this file.
 
+## [0.1.5] - 2026-03-12
+
+### Added
+
+- Completed the public FIPS 205 SLH-DSA surface with deterministic internal key generation, pure/context signing and verification, and HashSLH-DSA pre-hash wrappers.
+- Added deeper SPHINCS+ / FIPS 205 reference-oracle coverage for all 12 parameter sets, pre-hash algorithms, and selected deep-count KAT checks.
+
+### Changed
+
+- Renamed the FIPS 205 reference harness and user-facing documentation to refer to SPHINCS+ / FIPS 205 reference validation rather than an external repository label.
+- Updated `make test-deep-slh` and the API overview so the documented SLH-DSA surface matches the code that is actually shipped.
+
+### Fixed
+
+- Corrected FORS base-`2^a` index extraction to match the FIPS 205 bit ordering.
+- Corrected ADRS type-transition handling so `set_type`, `set_type_and_clear`, and the key-pair-preserving variant follow the expected SPHINCS+ semantics.
+
 ## [0.1.4] - 2026-03-12
 
 ### Fixed
@@ -42,7 +59,7 @@ All notable changes to Tafrah are documented in this file.
 
 - Final ML-KEM oracle parity against `liboqs` `mlkem-native` for ML-KEM-512, ML-KEM-768, and ML-KEM-1024.
 - Default-on ML-DSA oracle verification against `dilithium-master/ref` for ML-DSA-44, ML-DSA-65, and ML-DSA-87.
-- Current-reference SLH-DSA deterministic parity against `sphincsplus-master/ref` for all 12 standard parameter sets at `count=0`, plus a deeper selected-count audit.
+- Current FIPS 205 SPHINCS+ reference parity for all 12 standard parameter sets at `count=0`, plus a deeper selected-count audit.
 - Full all-count HQC reference reconstruction and decapsulation coverage for HQC-128, HQC-192, and HQC-256.
 - Multi-language implementation examples in `examples/auth-demo`.
 - Root-level build, install, examples, and coverage entry points through `make`.

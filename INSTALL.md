@@ -31,7 +31,7 @@ Run the default reference-oracle suite:
 make test-reference
 ```
 
-Run the deeper SLH-DSA current-reference audit:
+Run the deeper FIPS 205 SPHINCS+ reference audit:
 
 ```sh
 make test-deep-slh

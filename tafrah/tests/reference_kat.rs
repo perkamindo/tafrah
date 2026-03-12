@@ -1,14 +1,9 @@
-#[path = "support/nist_kat_rng.rs"]
-mod nist_kat_rng;
-
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use nist_kat_rng::NistKatDrbg;
-use rand_core::{CryptoRng, Error as RandError, RngCore};
 use sha3::digest::{Digest, ExtendableOutput, Update, XofReader};
 use sha3::{Sha3_256, Sha3_512, Shake256};
 use tafrah_ml_dsa::params::{ML_DSA_44, ML_DSA_65, ML_DSA_87};
@@ -21,10 +16,7 @@ use tafrah_slh_dsa::params::{
     SLH_DSA_SHAKE_128S, SLH_DSA_SHAKE_192F, SLH_DSA_SHAKE_192S, SLH_DSA_SHAKE_256F,
     SLH_DSA_SHAKE_256S,
 };
-use tafrah_slh_dsa::types::{
-    Signature as SlhDsaSignature, SigningKey as SlhDsaSigningKey,
-    VerifyingKey as SlhDsaVerifyingKey,
-};
+use tafrah_slh_dsa::types::{Signature as SlhDsaSignature, VerifyingKey as SlhDsaVerifyingKey};
 
 fn ref_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -86,15 +78,6 @@ fn hex_decode(hex: &str) -> Vec<u8> {
         bytes.push(u8::from_str_radix(text, 16).unwrap());
     }
     bytes
-}
-
-fn hex_encode_upper(bytes: &[u8]) -> String {
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        use std::fmt::Write as _;
-        write!(&mut out, "{byte:02X}").expect("write to string");
-    }
-    out
 }
 
 fn field<'a>(entry: &'a BTreeMap<String, String>, key: &str) -> &'a str {
@@ -212,101 +195,6 @@ fn build_mlkem_native_detkat(mode: u16, out_dir: &Path) -> PathBuf {
 
     binary
 }
-
-fn build_sphincs_master_detkat(param_name: &str, out_dir: &Path) -> PathBuf {
-    let ref_dir = ref_root().join("SPHINCS-FIPS_205").join("sphincsplus-master").join("ref");
-    let helper = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests")
-        .join("support")
-        .join("sphincs_master_detkat.c");
-    let binary = out_dir.join(format!("sphincs_master_detkat_{}", param_name.replace('-', "_")));
-
-    let mut cmd = Command::new("cc");
-    cmd.arg("-O2")
-        .arg("-std=c99")
-        .arg(format!("-DPARAMS={param_name}"))
-        .arg(format!("-I{}", ref_dir.display()))
-        .arg("-o")
-        .arg(&binary)
-        .arg(&helper)
-        .arg(ref_dir.join("address.c"))
-        .arg(ref_dir.join("merkle.c"))
-        .arg(ref_dir.join("wots.c"))
-        .arg(ref_dir.join("wotsx1.c"))
-        .arg(ref_dir.join("utils.c"))
-        .arg(ref_dir.join("utilsx1.c"))
-        .arg(ref_dir.join("fors.c"))
-        .arg(ref_dir.join("sign.c"));
-
-    if param_name.contains("sha2") {
-        cmd.arg(ref_dir.join("sha2.c"))
-            .arg(ref_dir.join("hash_sha2.c"))
-            .arg(ref_dir.join("thash_sha2_simple.c"));
-    } else if param_name.contains("shake") {
-        cmd.arg(ref_dir.join("fips202.c"))
-            .arg(ref_dir.join("hash_shake.c"))
-            .arg(ref_dir.join("thash_shake_simple.c"));
-    } else {
-        panic!("unsupported sphincs-master parameter set {param_name}");
-    }
-
-    let output = cmd
-        .output()
-        .unwrap_or_else(|err| panic!("failed to spawn cc for sphincs-master {param_name}: {err}"));
-
-    assert!(
-        output.status.success(),
-        "failed to build sphincs-master {param_name} oracle:\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    binary
-}
-
-struct SliceRng {
-    bytes: Vec<u8>,
-    offset: usize,
-}
-
-impl SliceRng {
-    fn new(bytes: Vec<u8>) -> Self {
-        Self { bytes, offset: 0 }
-    }
-}
-
-impl RngCore for SliceRng {
-    fn next_u32(&mut self) -> u32 {
-        let mut buf = [0u8; 4];
-        self.fill_bytes(&mut buf);
-        u32::from_le_bytes(buf)
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        let mut buf = [0u8; 8];
-        self.fill_bytes(&mut buf);
-        u64::from_le_bytes(buf)
-    }
-
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        let end = self.offset + dest.len();
-        assert!(
-            end <= self.bytes.len(),
-            "slice rng exhausted: requested {}, remaining {}",
-            dest.len(),
-            self.bytes.len().saturating_sub(self.offset)
-        );
-        dest.copy_from_slice(&self.bytes[self.offset..end]);
-        self.offset = end;
-    }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), RandError> {
-        self.fill_bytes(dest);
-        Ok(())
-    }
-}
-
-impl CryptoRng for SliceRng {}
 
 #[test]
 fn test_reference_ml_kem_decapsulation_kats() {
@@ -589,7 +477,7 @@ fn test_reference_ml_dsa_verify_dilithium_master_kats() {
 }
 
 #[test]
-#[ignore = "legacy SPHINCS KAT corpus diverges from sphincsplus-master/ref SHA2 semantics"]
+#[ignore = "legacy SPHINCS KAT corpus diverges from current FIPS 205 SHA2 semantics"]
 fn test_reference_slh_dsa_verify_kats() {
     let cases: [(&str, &SlhDsaParams); 12] = [
         ("sphincs-sha256-128f-simple", &SLH_DSA_SHA2_128F),
@@ -644,237 +532,4 @@ fn test_reference_slh_dsa_verify_kats() {
             });
         }
     }
-}
-
-#[test]
-fn test_reference_slh_dsa_sphincs_master_detkat_count0() {
-    if !cc_available() {
-        return;
-    }
-
-    let cases: [(&str, &str, &SlhDsaParams); 12] = [
-        ("sphincs-sha256-128f-simple", "sphincs-sha2-128f", &SLH_DSA_SHA2_128F),
-        ("sphincs-sha256-128s-simple", "sphincs-sha2-128s", &SLH_DSA_SHA2_128S),
-        ("sphincs-sha256-192f-simple", "sphincs-sha2-192f", &SLH_DSA_SHA2_192F),
-        ("sphincs-sha256-192s-simple", "sphincs-sha2-192s", &SLH_DSA_SHA2_192S),
-        ("sphincs-sha256-256f-simple", "sphincs-sha2-256f", &SLH_DSA_SHA2_256F),
-        ("sphincs-sha256-256s-simple", "sphincs-sha2-256s", &SLH_DSA_SHA2_256S),
-        ("sphincs-shake256-128f-simple", "sphincs-shake-128f", &SLH_DSA_SHAKE_128F),
-        ("sphincs-shake256-128s-simple", "sphincs-shake-128s", &SLH_DSA_SHAKE_128S),
-        ("sphincs-shake256-192f-simple", "sphincs-shake-192f", &SLH_DSA_SHAKE_192F),
-        ("sphincs-shake256-192s-simple", "sphincs-shake-192s", &SLH_DSA_SHAKE_192S),
-        ("sphincs-shake256-256f-simple", "sphincs-shake-256f", &SLH_DSA_SHAKE_256F),
-        ("sphincs-shake256-256s-simple", "sphincs-shake-256s", &SLH_DSA_SHAKE_256S),
-    ];
-    let mut required_paths: Vec<PathBuf> = cases
-        .iter()
-        .map(|(variant, _, params)| {
-            ref_root()
-                .join("SPHINCS-FIPS_205")
-                .join("KAT")
-                .join(variant)
-                .join(format!("PQCsignKAT_{}.rsp", params.n * 4))
-        })
-        .collect();
-    required_paths.push(
-        ref_root()
-            .join("SPHINCS-FIPS_205")
-            .join("sphincsplus-master")
-            .join("ref")
-            .join("sign.c"),
-    );
-    if !ensure_reference_paths("SLH-DSA sphincsplus-master count0 parity", &required_paths) {
-        return;
-    }
-
-    let work_dir = unique_temp_dir("tafrah-sphincs-master");
-
-    for (variant, param_name, params) in cases {
-        let path = ref_root()
-            .join("SPHINCS-FIPS_205")
-            .join("KAT")
-            .join(variant)
-            .join(format!("PQCsignKAT_{}.rsp", params.n * 4));
-        let entry = parse_rsp_entries(&path, Some(1))
-            .into_iter()
-            .next()
-            .unwrap_or_else(|| panic!("{variant}: missing count=0 KAT entry"));
-
-        let count = field(&entry, "count");
-        let seed: [u8; 48] = hex_decode(field(&entry, "seed"))
-            .try_into()
-            .unwrap_or_else(|_| panic!("{variant} count={count}: invalid KAT seed length"));
-        let msg = hex_decode(field(&entry, "msg"));
-        let expected_pk = hex_decode(field(&entry, "pk"));
-        let expected_sk = hex_decode(field(&entry, "sk"));
-        let expected_sm = hex_decode(field(&entry, "sm"));
-
-        let mut kat_rng = NistKatDrbg::new(seed);
-        let mut seed_material = vec![0u8; 3 * params.n];
-        kat_rng.fill_bytes(&mut seed_material);
-        let mut optrand = vec![0u8; params.n];
-        kat_rng.fill_bytes(&mut optrand);
-
-        let helper = build_sphincs_master_detkat(param_name, &work_dir);
-        let output = Command::new(&helper)
-            .arg(hex_encode_upper(&seed_material))
-            .arg(hex_encode_upper(&optrand))
-            .arg(hex_encode_upper(&msg))
-            .output()
-            .unwrap_or_else(|err| panic!("{variant}: failed to execute sphincs-master oracle: {err}"));
-
-        assert!(
-            output.status.success(),
-            "{variant}: sphincs-master oracle failed:\nstdout:\n{}\nstderr:\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-
-        let stdout = String::from_utf8(output.stdout)
-            .unwrap_or_else(|err| panic!("{variant}: invalid oracle stdout: {err}"));
-        let mut lines = stdout.lines();
-        let oracle_pk = hex_decode(lines.next().unwrap_or_else(|| panic!("{variant}: missing oracle pk")));
-        let oracle_sk = hex_decode(lines.next().unwrap_or_else(|| panic!("{variant}: missing oracle sk")));
-        let oracle_sig = hex_decode(lines.next().unwrap_or_else(|| panic!("{variant}: missing oracle sig")));
-
-        let mut keygen_rng = SliceRng::new(seed_material);
-        let (vk, sk) = tafrah_slh_dsa::keygen::slh_dsa_keygen(&mut keygen_rng, params)
-            .unwrap_or_else(|err| panic!("{variant} count={count}: keygen failed: {err}"));
-
-        assert_eq!(vk.bytes, oracle_pk, "{variant} count={count}: public key mismatch");
-        assert_eq!(sk.bytes, oracle_sk, "{variant} count={count}: secret key mismatch");
-
-        let mut sign_rng = SliceRng::new(optrand);
-        let sig = tafrah_slh_dsa::sign::slh_dsa_sign(&sk, &msg, &mut sign_rng, params)
-            .unwrap_or_else(|err| panic!("{variant} count={count}: sign failed: {err}"));
-        let mut attached = sig.bytes.clone();
-        attached.extend_from_slice(&msg);
-
-        assert_eq!(sig.bytes, oracle_sig, "{variant} count={count}: detached signature mismatch");
-
-        tafrah_slh_dsa::verify::slh_dsa_verify(&vk, &msg, &sig, params).unwrap_or_else(|err| {
-            panic!("{variant} count={count}: self-verification failed after deterministic sign: {err}")
-        });
-
-        let detached_len = expected_sm.len() - msg.len();
-        let kat_sig = SlhDsaSignature {
-            bytes: expected_sm[..detached_len].to_vec(),
-        };
-        let kat_vk = SlhDsaVerifyingKey { bytes: expected_pk };
-        let kat_sk = SlhDsaSigningKey { bytes: expected_sk };
-
-        assert_eq!(kat_sig.bytes.len(), params.sig_bytes, "{variant} count={count}: legacy detached signature length mismatch");
-        assert_eq!(kat_vk.bytes.len(), params.pk_bytes, "{variant} count={count}: legacy vk length mismatch");
-        assert_eq!(kat_sk.bytes.len(), params.sk_bytes, "{variant} count={count}: legacy sk length mismatch");
-        assert_eq!(attached.len(), expected_sm.len(), "{variant} count={count}: attached signature length mismatch");
-    }
-
-    let _ = fs::remove_dir_all(&work_dir);
-}
-
-#[test]
-#[ignore = "deep current-reference audit; expensive"]
-fn test_reference_slh_dsa_sphincs_master_detkat_selected_deep_counts() {
-    if !cc_available() {
-        return;
-    }
-
-    let cases: [(&str, &str, &SlhDsaParams); 4] = [
-        ("sphincs-sha256-128f-simple", "sphincs-sha2-128f", &SLH_DSA_SHA2_128F),
-        ("sphincs-sha256-256s-simple", "sphincs-sha2-256s", &SLH_DSA_SHA2_256S),
-        ("sphincs-shake256-128f-simple", "sphincs-shake-128f", &SLH_DSA_SHAKE_128F),
-        ("sphincs-shake256-256s-simple", "sphincs-shake-256s", &SLH_DSA_SHAKE_256S),
-    ];
-    let mut required_paths: Vec<PathBuf> = cases
-        .iter()
-        .map(|(variant, _, params)| {
-            ref_root()
-                .join("SPHINCS-FIPS_205")
-                .join("KAT")
-                .join(variant)
-                .join(format!("PQCsignKAT_{}.rsp", params.n * 4))
-        })
-        .collect();
-    required_paths.push(
-        ref_root()
-            .join("SPHINCS-FIPS_205")
-            .join("sphincsplus-master")
-            .join("ref")
-            .join("sign.c"),
-    );
-    if !ensure_reference_paths("SLH-DSA sphincsplus-master deep parity", &required_paths) {
-        return;
-    }
-    let counts = ["0", "99"];
-    let work_dir = unique_temp_dir("tafrah-sphincs-master-deep");
-
-    for (variant, param_name, params) in cases {
-        let path = ref_root()
-            .join("SPHINCS-FIPS_205")
-            .join("KAT")
-            .join(variant)
-            .join(format!("PQCsignKAT_{}.rsp", params.n * 4));
-        let entries = parse_rsp_entries(&path, None);
-        let helper = build_sphincs_master_detkat(param_name, &work_dir);
-
-        for target_count in counts {
-            let entry = entries
-                .iter()
-                .find(|entry| field(entry, "count") == target_count)
-                .unwrap_or_else(|| panic!("{variant}: missing count={target_count} entry"));
-
-            let seed: [u8; 48] = hex_decode(field(entry, "seed"))
-                .try_into()
-                .unwrap_or_else(|_| panic!("{variant} count={target_count}: invalid KAT seed length"));
-            let msg = hex_decode(field(entry, "msg"));
-
-            let mut kat_rng = NistKatDrbg::new(seed);
-            let mut seed_material = vec![0u8; 3 * params.n];
-            kat_rng.fill_bytes(&mut seed_material);
-            let mut optrand = vec![0u8; params.n];
-            kat_rng.fill_bytes(&mut optrand);
-
-            let output = Command::new(&helper)
-                .arg(hex_encode_upper(&seed_material))
-                .arg(hex_encode_upper(&optrand))
-                .arg(hex_encode_upper(&msg))
-                .output()
-                .unwrap_or_else(|err| {
-                    panic!("{variant} count={target_count}: failed to execute sphincs-master oracle: {err}")
-                });
-
-            assert!(
-                output.status.success(),
-                "{variant} count={target_count}: sphincs-master oracle failed:\nstdout:\n{}\nstderr:\n{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
-            );
-
-            let stdout = String::from_utf8(output.stdout)
-                .unwrap_or_else(|err| panic!("{variant} count={target_count}: invalid oracle stdout: {err}"));
-            let mut lines = stdout.lines();
-            let oracle_pk = hex_decode(lines.next().unwrap_or_else(|| panic!("{variant} count={target_count}: missing oracle pk")));
-            let oracle_sk = hex_decode(lines.next().unwrap_or_else(|| panic!("{variant} count={target_count}: missing oracle sk")));
-            let oracle_sig = hex_decode(lines.next().unwrap_or_else(|| panic!("{variant} count={target_count}: missing oracle sig")));
-
-            let mut keygen_rng = SliceRng::new(seed_material);
-            let (vk, sk) = tafrah_slh_dsa::keygen::slh_dsa_keygen(&mut keygen_rng, params)
-                .unwrap_or_else(|err| panic!("{variant} count={target_count}: keygen failed: {err}"));
-
-            assert_eq!(vk.bytes, oracle_pk, "{variant} count={target_count}: public key mismatch");
-            assert_eq!(sk.bytes, oracle_sk, "{variant} count={target_count}: secret key mismatch");
-
-            let mut sign_rng = SliceRng::new(optrand);
-            let sig = tafrah_slh_dsa::sign::slh_dsa_sign(&sk, &msg, &mut sign_rng, params)
-                .unwrap_or_else(|err| panic!("{variant} count={target_count}: sign failed: {err}"));
-
-            assert_eq!(sig.bytes, oracle_sig, "{variant} count={target_count}: detached signature mismatch");
-
-            tafrah_slh_dsa::verify::slh_dsa_verify(&vk, &msg, &sig, params).unwrap_or_else(|err| {
-                panic!("{variant} count={target_count}: self-verification failed after deterministic sign: {err}")
-            });
-        }
-    }
-
-    let _ = fs::remove_dir_all(&work_dir);
 }
