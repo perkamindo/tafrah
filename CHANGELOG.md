@@ -2,6 +2,13 @@
 
 All notable changes to Tafrah are documented in this file.
 
+## [0.1.3] - 2026-03-12
+
+### Changed
+
+- Expanded the `tafrah` crate root documentation into a sectioned, docs.rs-friendly guide covering standards, API selection, feature flags, quick-start examples, `no_std`, error handling, and ecosystem layers.
+- Added clickable links from the umbrella crate documentation into the shared trait and error documentation so the crate root acts as a practical navigation hub.
+
 ## [0.1.2] - 2026-03-12
 
 ### Fixed
