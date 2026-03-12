@@ -2,6 +2,13 @@
 
 All notable changes to Tafrah are documented in this file.
 
+## [0.1.2] - 2026-03-12
+
+### Fixed
+
+- Removed the obsolete `doc_auto_cfg` nightly gate from the umbrella crate so docs.rs can build `tafrah` on current nightly toolchains.
+- Kept docs.rs configured for `all-features`, preserving Falcon and HQC visibility in the umbrella documentation without relying on removed nightly features.
+
 ## [0.1.1] - 2026-03-12
 
 ### Changed

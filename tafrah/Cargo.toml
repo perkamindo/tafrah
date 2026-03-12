@@ -1,6 +1,6 @@
 [package]
 name = "tafrah"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Native Rust Post-Quantum Cryptography library"
 authors.workspace = true
@@ -11,7 +11,6 @@ readme.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = ["std", "ml-kem", "ml-dsa", "slh-dsa"]
