@@ -15,25 +15,17 @@ use crate::params::Params;
 use crate::types::{SigningKey, VerifyingKey};
 use tafrah_traits::Error;
 
-/// Generates an ML-DSA verifying key and signing key pair.
-///
-/// This is the public FIPS 204 key generation entry point for callers that
-/// work with explicit [`Params`] values.
-pub fn ml_dsa_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+fn ml_dsa_keygen_from_seed(
+    seed: &[u8; 32],
     params: &Params,
 ) -> Result<(VerifyingKey, SigningKey), Error> {
     params.validate()?;
     let k = params.k;
     let l = params.l;
 
-    // ξ ←$ B^32
-    let mut xi = [0u8; 32];
-    rng.fill_bytes(&mut xi);
-
     // (ρ, ρ', K) = H(ξ || k || l)
     let mut h_input = Vec::with_capacity(34);
-    h_input.extend_from_slice(&xi);
+    h_input.extend_from_slice(seed);
     h_input.push(k as u8);
     h_input.push(l as u8);
 
@@ -82,7 +74,7 @@ pub fn ml_dsa_keygen(
 
     // NTT(s1)
     let mut s1_hat: Vec<Poly> = s1.clone();
-    for p in s1_hat.iter_mut() {
+    for p in &mut s1_hat {
         p.ntt();
     }
 
@@ -94,7 +86,7 @@ pub fn ml_dsa_keygen(
             let prod = a_hat[i][j].pointwise_mul(&s1_hat[j]);
             ti.add_assign(&prod);
         }
-        ti.reduce(); // reduce before inv_ntt to prevent i32 overflow
+        ti.reduce();
         ti.inv_ntt();
         ti = ti.add(&s2[i]);
         ti.caddq();
@@ -104,11 +96,11 @@ pub fn ml_dsa_keygen(
     // (t1, t0) = Power2Round(t)
     let mut t1: Vec<Poly> = Vec::with_capacity(k);
     let mut t0: Vec<Poly> = Vec::with_capacity(k);
-    for i in 0..k {
+    for poly in &t {
         let mut t1i = Poly::zero();
         let mut t0i = Poly::zero();
         for j in 0..256 {
-            let (hi, lo) = hint::power2round(t[i].coeffs[j], params.d);
+            let (hi, lo) = hint::power2round(poly.coeffs[j], params.d);
             t1i.coeffs[j] = hi;
             t0i.coeffs[j] = lo;
         }
@@ -149,4 +141,28 @@ pub fn ml_dsa_keygen(
         VerifyingKey { bytes: pk_bytes },
         SigningKey { bytes: sk_bytes },
     ))
+}
+
+/// Generates an ML-DSA verifying key and signing key pair.
+///
+/// This is the public FIPS 204 key generation entry point for callers that
+/// work with explicit [`Params`] values.
+pub fn ml_dsa_keygen(
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    params: &Params,
+) -> Result<(VerifyingKey, SigningKey), Error> {
+    let mut xi = [0u8; 32];
+    rng.fill_bytes(&mut xi);
+    ml_dsa_keygen_internal(&xi, params)
+}
+
+/// Generates an ML-DSA keypair from caller-supplied seed bytes.
+///
+/// This matches the internal FIPS 204 key generation flow and is useful for
+/// deterministic KAT reproduction.
+pub fn ml_dsa_keygen_internal(
+    seed: &[u8; 32],
+    params: &Params,
+) -> Result<(VerifyingKey, SigningKey), Error> {
+    ml_dsa_keygen_from_seed(seed, params)
 }

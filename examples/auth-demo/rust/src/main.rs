@@ -1,6 +1,7 @@
 use tafrah::falcon::falcon_512;
 use tafrah::hqc::hqc_128;
-use tafrah::ml_dsa::ml_dsa_65;
+use tafrah::ml_dsa::params::ML_DSA_65;
+use tafrah::ml_dsa::{keygen as ml_dsa_keygen, sign as ml_dsa_sign, verify as ml_dsa_verify};
 use tafrah::ml_kem::ml_kem_768;
 use tafrah::slh_dsa::params::SLH_DSA_SHAKE_128F;
 use tafrah::slh_dsa::{keygen, sign, verify};
@@ -24,13 +25,55 @@ fn main() {
     let (hqc_ct, hqc_client_ss) = hqc_128::encapsulate(&hqc_ek, &mut rng).expect("hqc encaps");
     let hqc_server_ss = hqc_128::decapsulate(&hqc_dk, &hqc_ct).expect("hqc decaps");
 
-    let (ml_vk, ml_sk) = ml_dsa_65::keygen(&mut rng);
+    let (ml_vk, ml_sk) = ml_dsa_keygen::ml_dsa_keygen(&mut rng, &ML_DSA_65).expect("ml-dsa keygen");
     let ml_message = b"tafrah-auth-demo::ml-dsa-65".to_vec();
-    let ml_sig = ml_dsa_65::sign_with_context(&ml_sk, &ml_message, &[], &mut rng).expect("ml-dsa sign");
-    let ml_verify_ok = ml_dsa_65::verify_with_context(&ml_vk, &ml_message, &ml_sig, &[]).is_ok();
+    let ml_sig = ml_dsa_sign::ml_dsa_sign_with_context(&ml_sk, &ml_message, &[], &mut rng, &ML_DSA_65)
+        .expect("ml-dsa sign");
+    let ml_verify_ok =
+        ml_dsa_verify::ml_dsa_verify_with_context(&ml_vk, &ml_message, &ml_sig, &[], &ML_DSA_65).is_ok();
     let ml_tamper_rejected =
-        ml_dsa_65::verify_with_context(&ml_vk, b"tafrah-auth-demo::ml-dsa-65\x01", &ml_sig, &[])
-            .is_err();
+        ml_dsa_verify::ml_dsa_verify_with_context(
+            &ml_vk,
+            b"tafrah-auth-demo::ml-dsa-65\x01",
+            &ml_sig,
+            &[],
+            &ML_DSA_65,
+        )
+        .is_err();
+    let ml_mu = [0x5Au8; 64];
+    let ml_extmu_sig =
+        ml_dsa_sign::ml_dsa_sign_extmu_deterministic(&ml_sk, &ml_mu, &ML_DSA_65).expect("ml-dsa extmu sign");
+    let ml_extmu_ok = ml_dsa_verify::ml_dsa_verify_extmu(&ml_vk, &ml_mu, &ml_extmu_sig, &ML_DSA_65).is_ok();
+    let ml_prehash_sig = ml_dsa_sign::ml_dsa_sign_prehash_shake256_deterministic(
+        &ml_sk,
+        &ml_message,
+        b"hashml",
+        &ML_DSA_65,
+    )
+    .expect("ml-dsa prehash sign");
+    let ml_prehash_ok = ml_dsa_verify::ml_dsa_verify_prehash_shake256(
+        &ml_vk,
+        &ml_message,
+        &ml_prehash_sig,
+        b"hashml",
+        &ML_DSA_65,
+    )
+    .is_ok();
+    let ml_signed = ml_dsa_sign::ml_dsa_sign_message_deterministic_with_context(
+        &ml_sk,
+        &ml_message,
+        b"openml",
+        &ML_DSA_65,
+    )
+    .expect("ml-dsa sign message");
+    let ml_open_ok = ml_dsa_verify::ml_dsa_open_signed_message_with_context(
+        &ml_vk,
+        &ml_signed,
+        b"openml",
+        &ML_DSA_65,
+    )
+    .map(|opened| opened == ml_message)
+    .unwrap_or(false);
 
     let (slh_vk, slh_sk) = keygen::slh_dsa_keygen(&mut rng, &SLH_DSA_SHAKE_128F).expect("slh keygen");
     let slh_message = b"tafrah-auth-demo::slh-dsa-shake-128f".to_vec();
@@ -52,17 +95,23 @@ fn main() {
         && hqc_client_ss.as_bytes() == hqc_server_ss.as_bytes()
         && ml_verify_ok
         && ml_tamper_rejected
+        && ml_extmu_ok
+        && ml_prehash_ok
+        && ml_open_ok
         && slh_verify_ok
         && slh_tamper_rejected
         && falcon_verify_ok
         && falcon_tamper_rejected;
 
     println!(
-        "{{\"language\":\"rust\",\"ml_kem_768_shared_secret_match\":{},\"hqc_128_shared_secret_match\":{},\"ml_dsa_65_verify_ok\":{},\"ml_dsa_65_tamper_rejected\":{},\"slh_dsa_shake_128f_verify_ok\":{},\"slh_dsa_shake_128f_tamper_rejected\":{},\"falcon_512_verify_ok\":{},\"falcon_512_tamper_rejected\":{},\"overall_ok\":{}}}",
+        "{{\"language\":\"rust\",\"ml_kem_768_shared_secret_match\":{},\"hqc_128_shared_secret_match\":{},\"ml_dsa_65_verify_ok\":{},\"ml_dsa_65_tamper_rejected\":{},\"ml_dsa_65_extmu_ok\":{},\"ml_dsa_65_prehash_ok\":{},\"ml_dsa_65_open_ok\":{},\"slh_dsa_shake_128f_verify_ok\":{},\"slh_dsa_shake_128f_tamper_rejected\":{},\"falcon_512_verify_ok\":{},\"falcon_512_tamper_rejected\":{},\"overall_ok\":{}}}",
         json_bool(kem_client_ss.as_bytes() == kem_server_ss.as_bytes()),
         json_bool(hqc_client_ss.as_bytes() == hqc_server_ss.as_bytes()),
         json_bool(ml_verify_ok),
         json_bool(ml_tamper_rejected),
+        json_bool(ml_extmu_ok),
+        json_bool(ml_prehash_ok),
+        json_bool(ml_open_ok),
         json_bool(slh_verify_ok),
         json_bool(slh_tamper_rejected),
         json_bool(falcon_verify_ok),

@@ -31,10 +31,10 @@ subtle = { version = "2", default-features = false }
 hmac = { version = "0.12", default-features = false }
 libm = { version = "0.2", default-features = false }
 
-tafrah-traits = { version = "0.1.0", path = "tafrah-traits" }
-tafrah-math = { version = "0.1.0", path = "tafrah-math" }
-tafrah-ml-kem = { version = "0.1.0", path = "tafrah-ml-kem" }
-tafrah-ml-dsa = { version = "0.1.0", path = "tafrah-ml-dsa" }
-tafrah-slh-dsa = { version = "0.1.1", path = "tafrah-slh-dsa" }
-tafrah-falcon = { version = "0.1.0", path = "tafrah-falcon" }
-tafrah-hqc = { version = "0.1.0", path = "tafrah-hqc" }
+tafrah-traits = { version = "0.1.6", path = "tafrah-traits" }
+tafrah-math = { version = "0.1.6", path = "tafrah-math" }
+tafrah-ml-kem = { version = "0.1.6", path = "tafrah-ml-kem" }
+tafrah-ml-dsa = { version = "0.1.6", path = "tafrah-ml-dsa" }
+tafrah-slh-dsa = { version = "0.1.6", path = "tafrah-slh-dsa" }
+tafrah-falcon = { version = "0.1.6", path = "tafrah-falcon" }
+tafrah-hqc = { version = "0.1.6", path = "tafrah-hqc" }

@@ -59,7 +59,7 @@
 //! For example:
 //!
 //! ```toml
-//! tafrah = { version = "0.1.5", features = ["falcon", "hqc"] }
+//! tafrah = { version = "0.1.6", features = ["falcon", "hqc"] }
 //! ```
 //!
 //! ## Quick start: ML-KEM
@@ -87,6 +87,10 @@
 //!
 //! ml_dsa_65::verify_with_context(&vk, msg, &sig, &[]).expect("verify");
 //! ```
+//!
+//! The generic `ml_dsa::sign`, `ml_dsa::verify`, and `ml_dsa::prehash`
+//! modules also expose the extended FIPS 204 surface for deterministic
+//! signing, caller-supplied `mu`, HashML-DSA, and signed-message helpers.
 //!
 //! ## Optional schemes
 //!

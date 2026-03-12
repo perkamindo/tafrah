@@ -77,10 +77,7 @@ fn treehash_with_auth(
         }
     }
 
-    (
-        stack.pop().unwrap_or_else(|| vec![0u8; n]),
-        auth_path,
-    )
+    (stack.pop().unwrap_or_else(|| vec![0u8; n]), auth_path)
 }
 
 /// Compute a subtree root with the reference treehash flow.
@@ -112,8 +109,15 @@ pub fn xmss_sign(
 
     let mut tree_adrs = adrs.clone();
     tree_adrs.set_type_and_clear(TREE);
-    let (_root, auth) =
-        treehash_with_auth(sk_seed, pk_seed, idx, 0, params.hp as u32, &mut tree_adrs, params);
+    let (_root, auth) = treehash_with_auth(
+        sk_seed,
+        pk_seed,
+        idx,
+        0,
+        params.hp as u32,
+        &mut tree_adrs,
+        params,
+    );
 
     let mut sig = sig_wots;
     sig.extend_from_slice(&auth);

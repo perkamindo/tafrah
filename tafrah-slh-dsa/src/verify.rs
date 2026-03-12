@@ -1,7 +1,6 @@
 /// Generic SLH-DSA verification entry point.
 ///
 /// Implements FIPS 205 Algorithm 20.
-
 extern crate alloc;
 
 use crate::address::{Adrs, FORS_TREE};

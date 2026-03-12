@@ -646,7 +646,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "rand",
  "rand_core",
@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-abi"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "rand",
  "tafrah-falcon",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-falcon"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "libm",
  "rand",
@@ -686,7 +686,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-hqc"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "rand",
  "rand_core",
@@ -697,7 +697,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-math"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "sha3",
  "subtle",
@@ -706,7 +706,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-ml-dsa"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "rand",
  "rand_core",
@@ -719,7 +719,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-ml-kem"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "rand",
  "rand_core",
@@ -732,7 +732,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-slh-dsa"
-version = "0.1.1"
+version = "0.1.6"
 dependencies = [
  "hmac",
  "rand",
@@ -746,7 +746,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-traits"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "rand_core",
  "zeroize",
@@ -754,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-uniffi"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "rand",
  "tafrah-falcon",

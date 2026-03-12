@@ -284,3 +284,58 @@ pub mod dsa {
         poly
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{dsa, kem};
+    use tafrah_traits::Error;
+
+    #[test]
+    fn test_kem_sampling_is_deterministic() {
+        let seed = [0xA5u8; 34];
+        let poly_a = kem::sample_ntt(&seed);
+        let poly_b = kem::sample_ntt(&seed);
+        assert_eq!(poly_a.coeffs, poly_b.coeffs);
+    }
+
+    #[test]
+    fn test_kem_sample_cbd_rejects_bad_eta_and_short_input() {
+        assert!(matches!(kem::sample_cbd(&[0u8; 16], 2), Err(Error::InvalidParameter)));
+        assert!(matches!(kem::sample_cbd(&[0u8; 128], 5), Err(Error::InvalidParameter)));
+    }
+
+    #[test]
+    fn test_dsa_sampling_is_deterministic() {
+        let seed = [0x3Cu8; 48];
+        let poly_a = dsa::sample_uniform(&seed);
+        let poly_b = dsa::sample_uniform(&seed);
+        assert_eq!(poly_a.coeffs, poly_b.coeffs);
+
+        let gamma_a = dsa::sample_gamma1(&seed, 17);
+        let gamma_b = dsa::sample_gamma1(&seed, 17);
+        assert_eq!(gamma_a.coeffs, gamma_b.coeffs);
+    }
+
+    #[test]
+    fn test_dsa_sample_cbd_eta_rejects_invalid_eta() {
+        assert!(matches!(
+            dsa::sample_cbd_eta(&[0x42u8; 32], 3),
+            Err(Error::InvalidParameter)
+        ));
+    }
+
+    #[test]
+    fn test_dsa_sample_in_ball_has_expected_weight_and_is_deterministic() {
+        let seed = [0x11u8; 32];
+        let poly_a = dsa::sample_in_ball(&seed, 39);
+        let poly_b = dsa::sample_in_ball(&seed, 39);
+        assert_eq!(poly_a.coeffs, poly_b.coeffs);
+
+        let nonzero = poly_a.coeffs.iter().filter(|&&coeff| coeff != 0).count();
+        assert_eq!(nonzero, 39);
+        assert!(poly_a
+            .coeffs
+            .iter()
+            .all(|&coeff| coeff == 0 || coeff == 1 || coeff == -1));
+    }
+}

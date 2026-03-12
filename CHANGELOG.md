@@ -2,6 +2,24 @@
 
 All notable changes to Tafrah are documented in this file.
 
+## [0.1.6] - 2026-03-12
+
+### Added
+
+- Expanded the FIPS 204 ML-DSA oracle parity harness to cover deterministic deep-count audits against the native ML-DSA reference surface, including an `all counts` release-mode audit target.
+- Added deterministic sampling regression coverage in `tafrah-math` for ML-KEM and ML-DSA seed-driven sampling helpers.
+
+### Changed
+
+- Aligned all public crate versions, ABI metadata, and release packaging metadata to the coordinated `0.1.6` workspace release.
+- Documented `tafrah-math` explicitly as a deterministic foundational layer that keeps entropy sourcing in the scheme and host layers instead of depending on `rand` directly.
+- Added a repository-level warning that FIPS 206 and FIPS 207 remain based on currently available specifications until NIST publishes final standards.
+
+### Fixed
+
+- Prevented the default ML-DSA reference test target from drifting behind the shipped API by wiring `mldsa_native_reference` into `make test-reference`.
+- Removed the hard-coded temporary checkout assumption from the deep ML-DSA audit target so release verification can discover the reference repository through the existing fallback logic.
+
 ## [0.1.5] - 2026-03-12
 
 ### Added

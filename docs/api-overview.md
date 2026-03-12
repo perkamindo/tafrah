@@ -48,6 +48,28 @@ SLH-DSA exposes parameter bundles plus the full FIPS 205 generic surface:
 - `prehash::hash_slh_verify`
 - constants such as `params::SLH_DSA_SHAKE_128F`
 
+ML-DSA exposes both the detached-signature surface and the broader FIPS 204
+helpers:
+
+- `keygen::ml_dsa_keygen`
+- `keygen::ml_dsa_keygen_internal`
+- `sign::ml_dsa_sign`
+- `sign::ml_dsa_sign_with_context`
+- `sign::ml_dsa_sign_deterministic`
+- `sign::ml_dsa_sign_internal`
+- `sign::ml_dsa_sign_extmu`
+- `sign::ml_dsa_sign_prehash`
+- `sign::ml_dsa_sign_prehash_shake256`
+- `sign::ml_dsa_sign_message`
+- `verify::ml_dsa_verify`
+- `verify::ml_dsa_verify_with_context`
+- `verify::ml_dsa_verify_internal`
+- `verify::ml_dsa_verify_extmu`
+- `verify::ml_dsa_verify_prehash`
+- `verify::ml_dsa_verify_prehash_shake256`
+- `verify::ml_dsa_open_signed_message`
+- constants such as `params::ML_DSA_44`
+
 ## Typical Types
 
 Each scheme crate exposes serialized key and message carrier types in its `types` module, such as:

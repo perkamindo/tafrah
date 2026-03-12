@@ -87,10 +87,12 @@ pub(crate) fn encode_signing_key(
         return Err(Error::InvalidKeyLength);
     }
 
-    let encoded_f = trim_i8_encode(f, params.log_n, params.fg_bits()).ok_or(Error::DecodingError)?;
-    let encoded_g = trim_i8_encode(g, params.log_n, params.fg_bits()).ok_or(Error::DecodingError)?;
-    let encoded_capital_f =
-        trim_i8_encode(capital_f, params.log_n, params.capital_fg_bits()).ok_or(Error::DecodingError)?;
+    let encoded_f =
+        trim_i8_encode(f, params.log_n, params.fg_bits()).ok_or(Error::DecodingError)?;
+    let encoded_g =
+        trim_i8_encode(g, params.log_n, params.fg_bits()).ok_or(Error::DecodingError)?;
+    let encoded_capital_f = trim_i8_encode(capital_f, params.log_n, params.capital_fg_bits())
+        .ok_or(Error::DecodingError)?;
 
     let mut out = Vec::with_capacity(params.sk_bytes);
     out.push(params.sk_tag());

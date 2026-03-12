@@ -83,3 +83,5 @@ For a local install:
 ```sh
 make install PREFIX="$PWD/dist/install"
 ```
+
+WARNING: FN-DSA (FIPS 206) and HQC (FIPS 207) have been selected by NIST but the standards are not yet finalized. This implementation follows the currently available specifications and may change once the official standards are published. Backward compatibility is not guaranteed.

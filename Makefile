@@ -4,14 +4,15 @@ PREFIX ?= $(CURDIR)/dist/install
 UNIFFI_LANGUAGE ?= python
 UNIFFI_OUT_DIR ?= $(CURDIR)/target/uniffi/$(UNIFFI_LANGUAGE)
 
-.PHONY: help test test-reference test-deep-slh coverage build build-abi build-ffi build-uniffi install install-abi install-ffi examples demo-examples demo-python generate-uniffi
+.PHONY: help test test-reference test-deep-slh test-deep-mldsa coverage build build-abi build-ffi build-uniffi install install-abi install-ffi examples demo-examples demo-python generate-uniffi
 
 help:
 	@printf '%s\n' \
 		'targets:' \
 		'  make test                 - run full workspace test suite' \
-		'  make test-reference       - run default reference oracle suite' \
+		'  make test-reference       - run default FIPS reference oracle suite' \
 		'  make test-deep-slh        - run expensive FIPS 205 SPHINCS+ reference audit' \
+		'  make test-deep-mldsa      - run expensive FIPS 204 ML-DSA reference audit' \
 		'  make coverage             - run workspace coverage with cargo-llvm-cov' \
 		'  make build                - build workspace debug artifacts' \
 		'  make build-abi            - build release C ABI shared library' \
@@ -28,9 +29,13 @@ test:
 
 test-reference:
 	cargo test -p tafrah --test reference_kat
+	cargo test -p tafrah --test mldsa_native_reference
 
 test-deep-slh:
 	cargo test -p tafrah --test fips205_reference test_fips205_selected_deep_counts --release -- --ignored
+
+test-deep-mldsa:
+	cargo test -p tafrah --test mldsa_native_reference test_mldsa_native_feature_parity_all_counts --release -- --ignored
 
 coverage:
 	@command -v cargo-llvm-cov >/dev/null 2>&1 || { echo "cargo-llvm-cov is required. Install it with: cargo install cargo-llvm-cov --locked"; exit 1; }

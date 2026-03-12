@@ -1,6 +1,6 @@
 [package]
 name = "tafrah-hqc"
-version = "0.1.0"
+version = "0.1.6"
 edition = "2021"
 description = "HQC (FIPS 207) scaffolding for the Tafrah PQC library"
 authors.workspace = true

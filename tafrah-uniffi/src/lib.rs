@@ -175,7 +175,7 @@ fn falcon_keypair(
 
 #[uniffi::export]
 pub fn version() -> String {
-    "tafrah-uniffi/0.1.0".to_owned()
+    "tafrah-uniffi/0.1.6".to_owned()
 }
 
 #[uniffi::export]
