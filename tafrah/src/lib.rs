@@ -38,11 +38,8 @@
 //! The shared trait layer in `traits` provides common vocabulary for generic
 //! consumers:
 //!
-//! - [`Encapsulate`](../tafrah_traits/kem/trait.Encapsulate.html) and
-//!   [`Decapsulate`](../tafrah_traits/kem/trait.Decapsulate.html) for KEMs
-//! - [`SigningKey`](../tafrah_traits/dsa/trait.SigningKey.html) and
-//!   [`VerifyingKey`](../tafrah_traits/dsa/trait.VerifyingKey.html) for
-//!   signatures
+//! - [`Encapsulate`] and [`Decapsulate`] for KEMs
+//! - [`SigningKey`] and [`VerifyingKey`] for signatures
 //!
 //! ## Feature flags
 //!
@@ -127,8 +124,7 @@
 //!
 //! ## Errors, serialization, and malformed inputs
 //!
-//! Public operations return `Result` and use
-//! [`traits::Error`](../tafrah_traits/enum.Error.html) or a scheme-local
+//! Public operations return `Result` and use [`Error`] or a scheme-local
 //! equivalent to report malformed serialized keys, ciphertexts, signatures, RNG
 //! failures, or unsupported parameter bundles.
 //!
@@ -153,6 +149,9 @@
 #![no_std]
 
 pub use tafrah_traits as traits;
+pub use tafrah_traits::dsa::{SigningKey, VerifyingKey};
+pub use tafrah_traits::kem::{Decapsulate, Encapsulate};
+pub use tafrah_traits::Error;
 
 #[cfg(feature = "ml-kem")]
 pub use tafrah_ml_kem as ml_kem;

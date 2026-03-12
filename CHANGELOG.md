@@ -2,6 +2,13 @@
 
 All notable changes to Tafrah are documented in this file.
 
+## [0.1.4] - 2026-03-12
+
+### Fixed
+
+- Re-exported the shared KEM traits, signature traits, and common `Error` type from the `tafrah` umbrella crate so crate-root documentation links resolve internally on docs.rs.
+- Removed the broken crate-root links that previously pointed into a non-existent `tafrah_traits` path under the `tafrah` docs namespace.
+
 ## [0.1.3] - 2026-03-12
 
 ### Changed
