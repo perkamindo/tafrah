@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/perkamindo/tafrah/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/perkamindo/tafrah/actions/workflows/ci.yml)
 [![Coverage](https://github.com/perkamindo/tafrah/actions/workflows/coverage.yml/badge.svg?branch=master)](https://github.com/perkamindo/tafrah/actions/workflows/coverage.yml)
+[![Crates.io](https://img.shields.io/crates/v/tafrah.svg)](https://crates.io/crates/tafrah)
+[![Dependencies](https://deps.rs/repo/github/perkamindo/tafrah/status.svg)](https://deps.rs/repo/github/perkamindo/tafrah)
 
 Tafrah is a Rust-native post-quantum cryptography workspace covering [FIPS `203`, `204`, and `205`](https://csrc.nist.gov/Projects/post-quantum-cryptography) together with [FIPS `206` and `207`](https://csrc.nist.gov/projects/post-quantum-cryptography/post-quantum-cryptography-standardization/selected-algorithms), which NIST lists as selected algorithms with `FIPS coming soon` status.
 

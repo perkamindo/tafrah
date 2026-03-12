@@ -1,6 +1,6 @@
 //! Traits shared by signature schemes.
 
-use rand_core::{CryptoRng, RngCore};
+use rand_core::{CryptoRng, Rng};
 
 /// Signing capability for a signature private key type.
 pub trait SigningKey {
@@ -11,7 +11,7 @@ pub trait SigningKey {
     fn sign(
         &self,
         msg: &[u8],
-        rng: &mut (impl CryptoRng + RngCore),
+        rng: &mut (impl CryptoRng + Rng),
     ) -> Result<Self::Signature, Self::Error>;
 }
 

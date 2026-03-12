@@ -243,7 +243,10 @@ fn test_hqc_128_seed_expansion_matches_reference_digests() {
         .join("Reference_Implementation")
         .join("hqc-128")
         .join("hqc-128_kat.rsp");
-    if !ensure_reference_paths("HQC-128 seed-expansion digest check", std::slice::from_ref(&path)) {
+    if !ensure_reference_paths(
+        "HQC-128 seed-expansion digest check",
+        std::slice::from_ref(&path),
+    ) {
         return;
     }
     let entry = parse_rsp_entries(&path)
@@ -311,7 +314,10 @@ fn test_hqc_256_seed_expansion_matches_reference_digests() {
         .join("Reference_Implementation")
         .join("hqc-256")
         .join("hqc-256_kat.rsp");
-    if !ensure_reference_paths("HQC-256 seed-expansion digest check", std::slice::from_ref(&path)) {
+    if !ensure_reference_paths(
+        "HQC-256 seed-expansion digest check",
+        std::slice::from_ref(&path),
+    ) {
         return;
     }
     let entry = parse_rsp_entries(&path)
@@ -407,7 +413,10 @@ fn test_hqc_keygen_reconstructs_reference_kat_entries() {
 
             let (native_pk, native_sk) = hqc_keygen_from_seeds(&sk_seed, &pk_seed, params)
                 .unwrap_or_else(|err| {
-                    panic!("{} count={count}: native keygen from seeds failed: {err}", params.alg_name)
+                    panic!(
+                        "{} count={count}: native keygen from seeds failed: {err}",
+                        params.alg_name
+                    )
                 });
 
             assert_eq!(
@@ -605,7 +614,7 @@ fn test_hqc_shell_rejects_malformed_inputs_without_panicking() {
     let well_sized_ct = Ciphertext {
         bytes: vec![0u8; HQC_128.ct_bytes],
     };
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     assert!(matches!(
         tafrah_hqc::hqc_128::encapsulate(&short_ek, &mut rng),

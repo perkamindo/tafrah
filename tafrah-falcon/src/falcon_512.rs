@@ -4,7 +4,7 @@ use tafrah_traits::Error;
 
 /// Generates a `Falcon-512` keypair.
 pub fn keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
 ) -> Result<(VerifyingKey, SigningKey), Error> {
     crate::keygen::falcon_keygen(rng, &FALCON_512)
 }
@@ -13,7 +13,7 @@ pub fn keygen(
 pub fn sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
 ) -> Result<Signature, Error> {
     crate::sign::falcon_sign(sk, msg, rng, &FALCON_512)
 }

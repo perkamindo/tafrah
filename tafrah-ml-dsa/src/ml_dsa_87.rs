@@ -4,7 +4,7 @@ use tafrah_traits::Error;
 
 /// Generates an `ML-DSA-87` keypair.
 pub fn keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
 ) -> (VerifyingKey, SigningKey) {
     crate::keygen::ml_dsa_keygen(rng, &ML_DSA_87)
         .expect("fixed ML-DSA-87 parameter set must be valid")
@@ -14,7 +14,7 @@ pub fn keygen(
 pub fn sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
 ) -> Signature {
     crate::sign::ml_dsa_sign(sk, msg, rng, &ML_DSA_87)
         .expect("fixed ML-DSA-87 parameter set must be valid")
@@ -25,7 +25,7 @@ pub fn sign_with_context(
     sk: &SigningKey,
     msg: &[u8],
     ctx: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
 ) -> Result<Signature, Error> {
     crate::sign::ml_dsa_sign_with_context(sk, msg, ctx, rng, &ML_DSA_87)
 }

@@ -1,5 +1,3 @@
-use rand::rngs::OsRng;
-
 use tafrah_ml_dsa::keygen;
 use tafrah_ml_dsa::ml_dsa_44;
 use tafrah_ml_dsa::params::{Params, ML_DSA_44};
@@ -10,7 +8,7 @@ use tafrah_traits::Error;
 
 #[test]
 fn test_ml_dsa_verify_rejects_malformed_serialized_inputs() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = ml_dsa_44::keygen(&mut rng);
     let msg = b"malformed input regression";
     let sig = ml_dsa_44::sign(&sk, msg, &mut rng);
@@ -34,7 +32,7 @@ fn test_ml_dsa_verify_rejects_malformed_serialized_inputs() {
 
 #[test]
 fn test_ml_dsa_context_is_bounded_to_one_byte() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = ml_dsa_44::keygen(&mut rng);
     let msg = b"context length regression";
     let oversized_ctx = [7u8; 256];
@@ -53,7 +51,7 @@ fn test_ml_dsa_context_is_bounded_to_one_byte() {
 
 #[test]
 fn test_ml_dsa_generic_api_rejects_invalid_params() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let msg = b"invalid params";
     let invalid = Params {
         gamma2: 12345,

@@ -1,9 +1,8 @@
 /// ML-DSA round-trip tests
-use rand::rngs::OsRng;
 
 #[test]
 fn test_ml_dsa_44_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = tafrah_ml_dsa::ml_dsa_44::keygen(&mut rng);
 
     let msg = b"test message for ML-DSA-44";
@@ -14,7 +13,7 @@ fn test_ml_dsa_44_roundtrip() {
 
 #[test]
 fn test_ml_dsa_44_context_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = tafrah_ml_dsa::ml_dsa_44::keygen(&mut rng);
 
     let msg = b"test message for ML-DSA-44 with context";
@@ -30,7 +29,7 @@ fn test_ml_dsa_44_context_roundtrip() {
 
 #[test]
 fn test_ml_dsa_44_wrong_message() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = tafrah_ml_dsa::ml_dsa_44::keygen(&mut rng);
 
     let msg = b"correct message";
@@ -46,7 +45,7 @@ fn test_ml_dsa_44_wrong_message() {
 
 #[test]
 fn test_ml_dsa_65_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = tafrah_ml_dsa::ml_dsa_65::keygen(&mut rng);
 
     let msg = b"test message for ML-DSA-65";
@@ -57,7 +56,7 @@ fn test_ml_dsa_65_roundtrip() {
 
 #[test]
 fn test_ml_dsa_87_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = tafrah_ml_dsa::ml_dsa_87::keygen(&mut rng);
 
     let msg = b"test message for ML-DSA-87";

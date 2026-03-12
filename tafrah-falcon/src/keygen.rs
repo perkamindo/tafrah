@@ -12,7 +12,7 @@ use crate::fft::{
     fft, ifft, poly_adj_fft, poly_invnorm2_fft, poly_mul_autoadj_fft, poly_mulconst,
     smallints_to_fpr,
 };
-use crate::fpr::{fpr_add, fpr_lt, fpr_sqr, BNORM_MAX, Fpr, GmTable, Q};
+use crate::fpr::{fpr_add, fpr_lt, fpr_sqr, Fpr, GmTable, BNORM_MAX, Q};
 use crate::key_material::{encode_signing_key, encode_verifying_key};
 use crate::mq::compute_public_from_small;
 use crate::ntru::solve_ntru;
@@ -159,7 +159,10 @@ fn orthogonalized_norm_ok(f: &[i8], g: &[i8], logn: usize) -> bool {
     fpr_lt(bnorm, BNORM_MAX)
 }
 
-fn sample_pre_ntru_candidate_from_xof<R: XofReader>(reader: &mut R, params: &Params) -> PreNtruCandidate {
+fn sample_pre_ntru_candidate_from_xof<R: XofReader>(
+    reader: &mut R,
+    params: &Params,
+) -> PreNtruCandidate {
     loop {
         let f = poly_small_mkgauss(reader, params.log_n);
         let g = poly_small_mkgauss(reader, params.log_n);
@@ -186,7 +189,7 @@ fn sample_pre_ntru_candidate_from_xof<R: XofReader>(reader: &mut R, params: &Par
 
 #[cfg(test)]
 fn sample_pre_ntru_candidate(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<PreNtruCandidate, Error> {
     let mut seed = [0u8; 48];
@@ -199,7 +202,7 @@ fn sample_pre_ntru_candidate(
 
 /// Generates a Falcon verifying key and signing key pair.
 pub fn falcon_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<(VerifyingKey, SigningKey), Error> {
     params.validate()?;
@@ -238,9 +241,11 @@ mod tests {
     use std::string::String;
     use std::vec::Vec;
 
+    use core::convert::Infallible;
+
     use rand::rngs::StdRng;
     use rand::SeedableRng;
-    use rand_core::{CryptoRng, Error as RandError, RngCore};
+    use rand_core::{TryCryptoRng, TryRng};
 
     use crate::derive::falcon_derive_verifying_key;
     use crate::key_material::decode_signing_key;
@@ -264,20 +269,22 @@ mod tests {
         }
     }
 
-    impl RngCore for FixedBytesRng {
-        fn next_u32(&mut self) -> u32 {
+    impl TryRng for FixedBytesRng {
+        type Error = Infallible;
+
+        fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
             let mut tmp = [0u8; 4];
-            self.fill_bytes(&mut tmp);
-            u32::from_le_bytes(tmp)
+            self.try_fill_bytes(&mut tmp)?;
+            Ok(u32::from_le_bytes(tmp))
         }
 
-        fn next_u64(&mut self) -> u64 {
+        fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
             let mut tmp = [0u8; 8];
-            self.fill_bytes(&mut tmp);
-            u64::from_le_bytes(tmp)
+            self.try_fill_bytes(&mut tmp)?;
+            Ok(u64::from_le_bytes(tmp))
         }
 
-        fn fill_bytes(&mut self, dest: &mut [u8]) {
+        fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
             let end = self.offset + dest.len();
             assert!(
                 end <= self.bytes.len(),
@@ -287,15 +294,11 @@ mod tests {
             );
             dest.copy_from_slice(&self.bytes[self.offset..end]);
             self.offset = end;
-        }
-
-        fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), RandError> {
-            self.fill_bytes(dest);
             Ok(())
         }
     }
 
-    impl CryptoRng for FixedBytesRng {}
+    impl TryCryptoRng for FixedBytesRng {}
 
     fn ref_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -367,13 +370,25 @@ mod tests {
             let norm =
                 poly_small_sqnorm(&candidate.f).wrapping_add(poly_small_sqnorm(&candidate.g));
             assert!(norm < 16_823);
-            assert!(orthogonalized_norm_ok(&candidate.f, &candidate.g, params.log_n));
+            assert!(orthogonalized_norm_ok(
+                &candidate.f,
+                &candidate.g,
+                params.log_n
+            ));
             assert_eq!(
-                candidate.f.iter().fold(0i32, |acc, &value| acc + value as i32) & 1,
+                candidate
+                    .f
+                    .iter()
+                    .fold(0i32, |acc, &value| acc + value as i32)
+                    & 1,
                 1
             );
             assert_eq!(
-                candidate.g.iter().fold(0i32, |acc, &value| acc + value as i32) & 1,
+                candidate
+                    .g
+                    .iter()
+                    .fold(0i32, |acc, &value| acc + value as i32)
+                    & 1,
                 1
             );
         }
@@ -390,8 +405,8 @@ mod tests {
             let derived = falcon_derive_verifying_key(&sk, params).expect("derive vk");
             assert_eq!(derived.bytes, vk.bytes);
 
-            let sig = falcon_sign(&sk, b"tafrah falcon keygen proof", &mut rng, params)
-                .expect("sign");
+            let sig =
+                falcon_sign(&sk, b"tafrah falcon keygen proof", &mut rng, params).expect("sign");
             falcon_verify(&vk, b"tafrah falcon keygen proof", &sig, params).expect("verify");
         }
     }
@@ -429,5 +444,4 @@ mod tests {
         assert_eq!(decoded.f, expected.f);
         assert_eq!(decoded.g, expected.g);
     }
-
 }

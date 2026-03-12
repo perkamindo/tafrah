@@ -104,7 +104,7 @@ pub fn k_pke_keygen(d: &[u8; 32], params: &Params) -> Result<(Vec<u8>, Vec<u8>),
 /// This is the public FIPS 203 Algorithm 16 entry point for callers that work
 /// with explicit [`Params`] values.
 pub fn ml_kem_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<(EncapsulationKey, DecapsulationKey), Error> {
     params.validate()?;

@@ -1,11 +1,10 @@
 /// SLH-DSA round-trip tests
 /// NOTE: SLH-DSA keygen and signing are computationally expensive,
 /// especially for the "s" (small) parameter sets. Only testing "f" (fast) variants.
-use rand::rngs::OsRng;
 
 #[test]
 fn test_slh_dsa_shake_128f_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let params = tafrah_slh_dsa::params::SLH_DSA_SHAKE_128F;
     let (vk, sk) = tafrah_slh_dsa::keygen::slh_dsa_keygen(&mut rng, &params).unwrap();
 
@@ -20,7 +19,7 @@ fn test_slh_dsa_shake_128f_roundtrip() {
 
 #[test]
 fn test_slh_dsa_shake_128f_wrong_message() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let params = tafrah_slh_dsa::params::SLH_DSA_SHAKE_128F;
     let (vk, sk) = tafrah_slh_dsa::keygen::slh_dsa_keygen(&mut rng, &params).unwrap();
 

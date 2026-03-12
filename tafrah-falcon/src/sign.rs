@@ -16,7 +16,7 @@ use crate::fft::{
 };
 use crate::fpr::{
     fpr_expm_p63, fpr_floor, fpr_half, fpr_mul, fpr_neg, fpr_of, fpr_rint, fpr_sqr, fpr_sub,
-    fpr_trunc, Fpr, GmTable, INV_2SQRSIGMA0, INV_LOG2, INVERSE_OF_Q, LOG2, SIGMA_MIN,
+    fpr_trunc, Fpr, GmTable, INVERSE_OF_Q, INV_2SQRSIGMA0, INV_LOG2, LOG2, SIGMA_MIN,
 };
 use crate::key_material::decode_signing_key;
 use crate::params::Params;
@@ -26,10 +26,10 @@ use tafrah_traits::Error;
 
 const DIST: [u32; 54] = [
     10745844, 3068844, 3741698, 5559083, 1580863, 8248194, 2260429, 13669192, 2736639, 708981,
-    4421575, 10046180, 169348, 7122675, 4136815, 30538, 13063405, 7650655, 4132, 14505003,
-    7826148, 417, 16768101, 11363290, 31, 8444042, 8086568, 1, 12844466, 265321, 0, 1232676,
-    13644283, 0, 38047, 9111839, 0, 870, 6138264, 0, 14, 12545723, 0, 0, 3104126, 0, 0, 28824,
-    0, 0, 198, 0, 0, 1,
+    4421575, 10046180, 169348, 7122675, 4136815, 30538, 13063405, 7650655, 4132, 14505003, 7826148,
+    417, 16768101, 11363290, 31, 8444042, 8086568, 1, 12844466, 265321, 0, 1232676, 13644283, 0,
+    38047, 9111839, 0, 870, 6138264, 0, 14, 12545723, 0, 0, 3104126, 0, 0, 28824, 0, 0, 198, 0, 0,
+    1,
 ];
 
 struct SamplerContext {
@@ -128,7 +128,17 @@ fn ff_sampling_fft(
     poly_split_fft(z1_lo, z1_hi, t1, logn, gm);
     let (tmp_lo, tmp_rest) = tmp.split_at_mut(hn);
     let (tmp_hi, tmp_work) = tmp_rest.split_at_mut(hn);
-    ff_sampling_fft(ctx, tmp_lo, tmp_hi, tree1, z1_lo, z1_hi, logn - 1, gm, tmp_work);
+    ff_sampling_fft(
+        ctx,
+        tmp_lo,
+        tmp_hi,
+        tree1,
+        z1_lo,
+        z1_hi,
+        logn - 1,
+        gm,
+        tmp_work,
+    );
     poly_merge_fft(z1, tmp_lo, tmp_hi, logn, gm);
 
     let (tmp_poly, _tmp_work) = tmp.split_at_mut(n);
@@ -141,7 +151,17 @@ fn ff_sampling_fft(
     poly_split_fft(z0_lo, z0_hi, tmp_poly, logn, gm);
     let (tmp_lo, tmp_rest) = tmp.split_at_mut(hn);
     let (tmp_hi, tmp_work2) = tmp_rest.split_at_mut(hn);
-    ff_sampling_fft(ctx, tmp_lo, tmp_hi, tree0, z0_lo, z0_hi, logn - 1, gm, tmp_work2);
+    ff_sampling_fft(
+        ctx,
+        tmp_lo,
+        tmp_hi,
+        tree0,
+        z0_lo,
+        z0_hi,
+        logn - 1,
+        gm,
+        tmp_work2,
+    );
     poly_merge_fft(z0, tmp_lo, tmp_hi, logn, gm);
 }
 
@@ -217,7 +237,7 @@ fn do_sign_tree(
 pub fn falcon_sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<Signature, Error> {
     params.validate()?;

@@ -1,6 +1,6 @@
 //! Traits shared by key encapsulation mechanisms.
 
-use rand_core::{CryptoRng, RngCore};
+use rand_core::{CryptoRng, Rng};
 
 /// Encapsulation capability for a KEM public key type.
 pub trait Encapsulate {
@@ -11,7 +11,7 @@ pub trait Encapsulate {
     /// Produces a ciphertext and shared secret.
     fn encapsulate(
         &self,
-        rng: &mut (impl CryptoRng + RngCore),
+        rng: &mut (impl CryptoRng + Rng),
     ) -> Result<(Self::Ciphertext, Self::SharedSecret), Self::Error>;
 }
 

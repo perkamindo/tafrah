@@ -22,7 +22,7 @@ fn words_from_bytes_le(bytes: &[u8], word_count: usize) -> Vec<u64> {
 }
 
 pub fn random_message_from_rng(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Vec<u64> {
     let mut message = vec![0u8; params.vec_k_size_bytes()];
@@ -31,7 +31,7 @@ pub fn random_message_from_rng(
 }
 
 pub fn random_salt_from_rng(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Vec<u8> {
     let mut salt = vec![0u8; params.salt_bytes];

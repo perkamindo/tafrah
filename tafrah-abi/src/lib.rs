@@ -5,7 +5,7 @@
 
 use core::ffi::{c_char, c_int};
 
-use rand::rngs::OsRng;
+use rand::rngs::ThreadRng;
 use tafrah_falcon::params::{Params as FalconParams, FALCON_1024, FALCON_512};
 use tafrah_falcon::types::{
     Signature as FalconSignature, SigningKey as FalconSigningKey,
@@ -118,7 +118,7 @@ fn falcon_keygen_inner<F>(
     keygen: F,
 ) -> c_int
 where
-    F: FnOnce(&mut OsRng) -> Result<(FalconVerifyingKey, FalconSigningKey), Error>,
+    F: FnOnce(&mut ThreadRng) -> Result<(FalconVerifyingKey, FalconSigningKey), Error>,
 {
     let vk_out = match unsafe { output_bytes_exact(vk_out, vk_len, params.pk_bytes) } {
         Ok(bytes) => bytes,
@@ -129,7 +129,7 @@ where
         Err(status) => return status,
     };
 
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     match keygen(&mut rng) {
         Ok((vk, sk)) => {
             vk_out.copy_from_slice(vk.as_bytes());
@@ -152,7 +152,7 @@ fn falcon_sign_inner<F>(
     sign: F,
 ) -> c_int
 where
-    F: FnOnce(&FalconSigningKey, &[u8], &mut OsRng) -> Result<FalconSignature, Error>,
+    F: FnOnce(&FalconSigningKey, &[u8], &mut ThreadRng) -> Result<FalconSignature, Error>,
 {
     let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_bytes) } {
         Ok(bytes) => bytes,
@@ -173,7 +173,7 @@ where
     let sk = FalconSigningKey {
         bytes: sk_bytes.to_vec(),
     };
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     match sign(&sk, msg_bytes, &mut rng) {
         Ok(sig) => {
             if sig.as_bytes().len() > params.sig_max_bytes || sig.as_bytes().len() > sig_out.len() {
@@ -240,7 +240,7 @@ fn hqc_keygen_inner<F>(
     keygen: F,
 ) -> c_int
 where
-    F: FnOnce(&mut OsRng) -> Result<(HqcEncapsulationKey, HqcDecapsulationKey), Error>,
+    F: FnOnce(&mut ThreadRng) -> Result<(HqcEncapsulationKey, HqcDecapsulationKey), Error>,
 {
     let ek_out = match unsafe { output_bytes_exact(ek_out, ek_len, params.pk_bytes) } {
         Ok(bytes) => bytes,
@@ -251,7 +251,7 @@ where
         Err(status) => return status,
     };
 
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     match keygen(&mut rng) {
         Ok((ek, dk)) => {
             ek_out.copy_from_slice(ek.as_bytes());
@@ -275,7 +275,7 @@ fn hqc_encapsulate_inner<F>(
 where
     F: FnOnce(
         &HqcEncapsulationKey,
-        &mut OsRng,
+        &mut ThreadRng,
     ) -> Result<(HqcCiphertext, tafrah_hqc::types::SharedSecret), Error>,
 {
     let ek_bytes = match unsafe { input_bytes_exact(ek_ptr, ek_len, params.pk_bytes) } {
@@ -294,7 +294,7 @@ where
     let ek = HqcEncapsulationKey {
         bytes: ek_bytes.to_vec(),
     };
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     match encapsulate(&ek, &mut rng) {
         Ok((ct, ss)) => {
             ct_out.copy_from_slice(ct.as_bytes());
@@ -522,7 +522,7 @@ pub extern "C" fn tafrah_ml_kem_768_keygen(
         Err(status) => return status,
     };
 
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (ek, dk) = tafrah_ml_kem::ml_kem_768::keygen(&mut rng);
     ek_out.copy_from_slice(ek.as_bytes());
     dk_out.copy_from_slice(dk.as_bytes());
@@ -554,7 +554,7 @@ pub extern "C" fn tafrah_ml_kem_768_encapsulate(
     let ek = MlKemEncapsulationKey {
         bytes: ek_bytes.to_vec(),
     };
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     match tafrah_ml_kem::ml_kem_768::encapsulate(&ek, &mut rng) {
         Ok((ct, ss)) => {
             ct_out.copy_from_slice(ct.as_bytes());
@@ -615,7 +615,7 @@ pub extern "C" fn tafrah_ml_dsa_65_keygen(
         Err(status) => return status,
     };
 
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = tafrah_ml_dsa::ml_dsa_65::keygen(&mut rng);
     vk_out.copy_from_slice(vk.as_bytes());
     sk_out.copy_from_slice(sk.as_bytes());
@@ -647,7 +647,7 @@ pub extern "C" fn tafrah_ml_dsa_65_sign(
     let sk = MlDsaSigningKey {
         bytes: sk_bytes.to_vec(),
     };
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     match tafrah_ml_dsa::ml_dsa_65::sign_with_context(&sk, msg_bytes, &[], &mut rng) {
         Ok(sig) => copy_result(sig.as_bytes(), sig_out),
         Err(err) => status_from_error(err),
@@ -704,7 +704,7 @@ pub extern "C" fn tafrah_slh_dsa_shake_128f_keygen(
         Err(status) => return status,
     };
 
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let (vk, sk) = match tafrah_slh_dsa::keygen::slh_dsa_keygen(&mut rng, &SLH_DSA_SHAKE_128F) {
         Ok(pair) => pair,
         Err(err) => return status_from_error(err),
@@ -740,7 +740,7 @@ pub extern "C" fn tafrah_slh_dsa_shake_128f_sign(
     let sk = SlhDsaSigningKey {
         bytes: sk_bytes.to_vec(),
     };
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     match tafrah_slh_dsa::sign::slh_dsa_sign(&sk, msg_bytes, &mut rng, &SLH_DSA_SHAKE_128F) {
         Ok(sig) => copy_result(sig.as_bytes(), sig_out),
         Err(err) => status_from_error(err),

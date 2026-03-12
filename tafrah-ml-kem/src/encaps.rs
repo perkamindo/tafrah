@@ -131,7 +131,7 @@ pub fn k_pke_encrypt(
 /// with explicit [`Params`] values.
 pub fn ml_kem_encaps(
     ek: &EncapsulationKey,
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<(Ciphertext, SharedSecret), Error> {
     params.validate()?;

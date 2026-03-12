@@ -14,7 +14,6 @@ tafrah = { version = "0.1", features = ["std", "ml-kem", "ml-dsa", "slh-dsa", "f
 ## Example
 
 ```rust
-use rand::thread_rng;
 use tafrah::falcon::falcon_512;
 use tafrah::ml_dsa::ml_dsa_65;
 use tafrah::ml_kem::ml_kem_768;
@@ -22,7 +21,7 @@ use tafrah::slh_dsa::params::SLH_DSA_SHAKE_128F;
 use tafrah::slh_dsa::sign::slh_sign;
 use tafrah::slh_dsa::verify::slh_verify;
 
-let mut rng = thread_rng();
+let mut rng = rand::rng();
 
 let (ek, dk) = ml_kem_768::keygen(&mut rng);
 let (ct, sender_ss) = ml_kem_768::encapsulate(&ek, &mut rng)?;

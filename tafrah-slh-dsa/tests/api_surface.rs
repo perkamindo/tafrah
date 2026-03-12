@@ -1,4 +1,6 @@
-use rand_core::{CryptoRng, Error as RandError, RngCore};
+use core::convert::Infallible;
+
+use rand_core::{TryCryptoRng, TryRng};
 
 use tafrah_slh_dsa::keygen::{slh_dsa_keygen, slh_keygen_internal};
 use tafrah_slh_dsa::params::{Params, SLH_DSA_SHA2_128F, SLH_DSA_SHAKE_128F};
@@ -18,34 +20,37 @@ impl SliceRng {
     }
 }
 
-impl CryptoRng for SliceRng {}
+impl TryRng for SliceRng {
+    type Error = Infallible;
 
-impl RngCore for SliceRng {
-    fn next_u32(&mut self) -> u32 {
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
         let mut buf = [0u8; 4];
-        self.fill_bytes(&mut buf);
-        u32::from_be_bytes(buf)
+        self.try_fill_bytes(&mut buf)?;
+        Ok(u32::from_be_bytes(buf))
     }
 
-    fn next_u64(&mut self) -> u64 {
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
         let mut buf = [0u8; 8];
-        self.fill_bytes(&mut buf);
-        u64::from_be_bytes(buf)
+        self.try_fill_bytes(&mut buf)?;
+        Ok(u64::from_be_bytes(buf))
     }
 
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Self::Error> {
         let end = self.offset + dest.len();
         dest.copy_from_slice(&self.bytes[self.offset..end]);
         self.offset = end;
-    }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), RandError> {
-        self.fill_bytes(dest);
         Ok(())
     }
 }
 
-fn fixed_keypair(params: &Params) -> (tafrah_slh_dsa::types::VerifyingKey, tafrah_slh_dsa::types::SigningKey) {
+impl TryCryptoRng for SliceRng {}
+
+fn fixed_keypair(
+    params: &Params,
+) -> (
+    tafrah_slh_dsa::types::VerifyingKey,
+    tafrah_slh_dsa::types::SigningKey,
+) {
     let n = params.n;
     let seed_material: Vec<u8> = (0..(3 * n)).map(|i| (i as u8).wrapping_mul(17)).collect();
     slh_keygen_internal(
@@ -145,11 +150,24 @@ fn test_hash_slh_supports_all_prehash_algorithms() {
         let (vk, sk) = fixed_keypair(&params);
         for algorithm in algorithms {
             let msg = format!("HashSLH proof {}", algorithm.identifier());
-            let sig =
-                hash_slh_sign(&sk, msg.as_bytes(), b"prehash-ctx", algorithm, None, &params)
-                    .unwrap();
-            hash_slh_verify(&vk, msg.as_bytes(), &sig, b"prehash-ctx", algorithm, &params)
-                .unwrap();
+            let sig = hash_slh_sign(
+                &sk,
+                msg.as_bytes(),
+                b"prehash-ctx",
+                algorithm,
+                None,
+                &params,
+            )
+            .unwrap();
+            hash_slh_verify(
+                &vk,
+                msg.as_bytes(),
+                &sig,
+                b"prehash-ctx",
+                algorithm,
+                &params,
+            )
+            .unwrap();
             assert_eq!(
                 hash_slh_verify(&vk, b"tampered", &sig, b"prehash-ctx", algorithm, &params),
                 Err(Error::VerificationFailed)

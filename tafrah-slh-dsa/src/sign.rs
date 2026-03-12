@@ -1,7 +1,6 @@
 /// Generic SLH-DSA signing entry point.
 ///
 /// Implements FIPS 205 Algorithm 19.
-
 extern crate alloc;
 use alloc::vec::Vec;
 
@@ -140,7 +139,7 @@ pub fn slh_sign(
 pub fn slh_dsa_sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<Signature, Error> {
     let mut opt_rand = alloc::vec![0u8; params.n];

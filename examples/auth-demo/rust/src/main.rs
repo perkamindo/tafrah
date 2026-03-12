@@ -1,4 +1,3 @@
-use rand::rngs::OsRng;
 use tafrah::falcon::falcon_512;
 use tafrah::hqc::hqc_128;
 use tafrah::ml_dsa::ml_dsa_65;
@@ -15,7 +14,7 @@ fn json_bool(value: bool) -> &'static str {
 }
 
 fn main() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
 
     let (kem_ek, kem_dk) = ml_kem_768::keygen(&mut rng);
     let (kem_ct, kem_client_ss) = ml_kem_768::encapsulate(&kem_ek, &mut rng).expect("ml-kem encaps");

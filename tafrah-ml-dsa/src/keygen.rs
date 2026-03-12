@@ -20,7 +20,7 @@ use tafrah_traits::Error;
 /// This is the public FIPS 204 key generation entry point for callers that
 /// work with explicit [`Params`] values.
 pub fn ml_dsa_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<(VerifyingKey, SigningKey), Error> {
     params.validate()?;

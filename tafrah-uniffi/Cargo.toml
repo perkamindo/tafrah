@@ -13,11 +13,11 @@ readme.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-rand = "0.8"
+rand = { workspace = true }
 tafrah-falcon = { workspace = true, features = ["std"] }
 tafrah-hqc = { workspace = true, features = ["std"] }
 tafrah-ml-dsa = { workspace = true, features = ["std"] }
 tafrah-ml-kem = { workspace = true, features = ["std"] }
 tafrah-slh-dsa = { workspace = true, features = ["std"] }
 tafrah-traits = { workspace = true, features = ["std"] }
-uniffi = "0.30"
+uniffi = "0.31"

@@ -1,12 +1,10 @@
-use rand::rngs::OsRng;
-
 use tafrah_slh_dsa::params::SLH_DSA_SHAKE_128F;
 use tafrah_slh_dsa::types::{Signature, SigningKey, VerifyingKey};
 use tafrah_traits::Error;
 
 #[test]
 fn test_slh_dsa_verify_rejects_malformed_serialized_inputs() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let params = SLH_DSA_SHAKE_128F;
     let (vk, sk) = tafrah_slh_dsa::keygen::slh_dsa_keygen(&mut rng, &params).unwrap();
     let msg = b"malformed input regression";
@@ -31,7 +29,7 @@ fn test_slh_dsa_verify_rejects_malformed_serialized_inputs() {
 
 #[test]
 fn test_slh_dsa_sign_rejects_malformed_inputs() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let params = SLH_DSA_SHAKE_128F;
     let malformed_sk = SigningKey {
         bytes: vec![0u8; params.sk_bytes - 1],
@@ -53,7 +51,7 @@ fn test_slh_dsa_sign_rejects_malformed_inputs() {
 
 #[test]
 fn test_slh_dsa_generic_api_rejects_invalid_params() {
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
     let mut invalid = SLH_DSA_SHAKE_128F;
     invalid.sig_bytes -= 1;
 

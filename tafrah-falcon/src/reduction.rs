@@ -175,7 +175,7 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
     use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::{RngExt, SeedableRng};
 
     use super::{poly_big_to_fp, poly_sub_scaled, poly_sub_scaled_ntt};
 
@@ -211,7 +211,12 @@ mod tests {
 
     #[test]
     fn test_poly_big_to_fp_matches_signed_decode() {
-        let coeffs = [17i128, -123456789i128, (1i128 << 50) - 33, -((1i128 << 55) - 7)];
+        let coeffs = [
+            17i128,
+            -123456789i128,
+            (1i128 << 50) - 33,
+            -((1i128 << 55) - 7),
+        ];
         let flen = 2usize;
         let stride = flen;
         let mut src = vec![0u32; coeffs.len() * stride];
@@ -239,13 +244,13 @@ mod tests {
         let mut k = vec![0i32; n];
 
         for u in 0..n {
-            let big = encode_signed_i128(rng.gen_range(-(1i128 << 70)..(1i128 << 70)), flen_big);
+            let big = encode_signed_i128(rng.random_range(-(1i128 << 70)..(1i128 << 70)), flen_big);
             let small =
-                encode_signed_i128(rng.gen_range(-(1i128 << 25)..(1i128 << 25)), flen_small);
+                encode_signed_i128(rng.random_range(-(1i128 << 25)..(1i128 << 25)), flen_small);
             f_big_a[u * flen_big..(u + 1) * flen_big].copy_from_slice(&big);
             f_big_b[u * flen_big..(u + 1) * flen_big].copy_from_slice(&big);
             f_small[u * flen_small..(u + 1) * flen_small].copy_from_slice(&small);
-            k[u] = rng.gen_range(-50_000..50_000);
+            k[u] = rng.random_range(-50_000..50_000);
         }
 
         let sch = 1u32;

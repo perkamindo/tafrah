@@ -5,8 +5,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use rand::RngCore;
 use rand::rngs::StdRng;
+use rand::Rng;
 use rand::SeedableRng;
 
 use nist_kat_rng::NistKatDrbg;
@@ -407,7 +407,9 @@ fn test_reference_falcon_deterministic_kat_parity_all_counts() {
             let count = field(entry, "count");
             let seed: [u8; 48] = hex_decode(field(entry, "seed"))
                 .try_into()
-                .unwrap_or_else(|_| panic!("{} count={count}: invalid KAT seed length", params.alg_name));
+                .unwrap_or_else(|_| {
+                    panic!("{} count={count}: invalid KAT seed length", params.alg_name)
+                });
             let msg = hex_decode(field(entry, "msg"));
             let expected_pk = hex_decode(field(entry, "pk"));
             let expected_sk = hex_decode(field(entry, "sk"));
@@ -489,7 +491,7 @@ fn test_falcon_shell_rejects_malformed_inputs_without_panicking() {
     let malformed_sig = Signature {
         bytes: vec![0x42; 43],
     };
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     assert!(matches!(
         tafrah_falcon::falcon_512::verify(&short_vk, b"msg", &malformed_sig),
@@ -530,14 +532,16 @@ fn test_falcon_generic_api_rejects_invalid_params() {
     let mut invalid = FALCON_512;
     invalid.sig_max_bytes -= 1;
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let dummy_vk = VerifyingKey {
         bytes: vec![0u8; FALCON_512.pk_bytes],
     };
     let dummy_sk = SigningKey {
         bytes: vec![0u8; FALCON_512.sk_bytes],
     };
-    let dummy_sig = Signature { bytes: vec![0u8; 43] };
+    let dummy_sig = Signature {
+        bytes: vec![0u8; 43],
+    };
 
     assert!(matches!(
         tafrah_falcon::keygen::falcon_keygen(&mut rng, &invalid),

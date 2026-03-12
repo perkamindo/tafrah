@@ -65,10 +65,9 @@
 //! ## Quick start: ML-KEM
 //!
 //! ```no_run
-//! use rand::rngs::OsRng;
 //! use tafrah::ml_kem::ml_kem_768;
 //!
-//! let mut rng = OsRng;
+//! let mut rng = rand::rng();
 //! let (ek, dk) = ml_kem_768::keygen(&mut rng);
 //! let (ct, client_ss) = ml_kem_768::encapsulate(&ek, &mut rng).expect("encapsulate");
 //! let server_ss = ml_kem_768::decapsulate(&dk, &ct).expect("decapsulate");
@@ -79,10 +78,9 @@
 //! ## Quick start: ML-DSA
 //!
 //! ```no_run
-//! use rand::rngs::OsRng;
 //! use tafrah::ml_dsa::ml_dsa_65;
 //!
-//! let mut rng = OsRng;
+//! let mut rng = rand::rng();
 //! let (vk, sk) = ml_dsa_65::keygen(&mut rng);
 //! let msg = b"tafrah-docs";
 //! let sig = ml_dsa_65::sign_with_context(&sk, msg, &[], &mut rng).expect("sign");
@@ -98,10 +96,9 @@
 //!
 //! ```no_run
 //! # #[cfg(feature = "falcon")] {
-//! use rand::rngs::OsRng;
 //! use tafrah::falcon::falcon_512;
 //!
-//! let mut rng = OsRng;
+//! let mut rng = rand::rng();
 //! let (vk, sk) = falcon_512::keygen(&mut rng).expect("keygen");
 //! let sig = falcon_512::sign(&sk, b"tafrah-docs", &mut rng).expect("sign");
 //!

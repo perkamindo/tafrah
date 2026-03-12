@@ -9,7 +9,7 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use nist_kat_rng::NistKatDrbg;
-use rand_core::RngCore;
+use rand_core::Rng;
 use tafrah_slh_dsa::keygen::slh_keygen_internal;
 use tafrah_slh_dsa::params::{
     HashType, Params, SLH_DSA_SHA2_128F, SLH_DSA_SHA2_128S, SLH_DSA_SHA2_192F, SLH_DSA_SHA2_192S,
@@ -29,9 +29,15 @@ fn ref_root() -> PathBuf {
 }
 
 fn is_fips205_reference_checkout(path: &Path) -> bool {
-    ["slh_dsa.c", "slh_prehash.c", "slh_sha2.c", "slh_shake.c", "slh_dsa.h"]
-        .iter()
-        .all(|file| path.join(file).exists())
+    [
+        "slh_dsa.c",
+        "slh_prehash.c",
+        "slh_sha2.c",
+        "slh_shake.c",
+        "slh_dsa.h",
+    ]
+    .iter()
+    .all(|file| path.join(file).exists())
 }
 
 fn discover_reference_checkout(root: &Path) -> Option<PathBuf> {
@@ -116,7 +122,10 @@ fn hex_encode_upper(bytes: &[u8]) -> String {
 }
 
 fn field<'a>(entry: &'a BTreeMap<String, String>, key: &str) -> &'a str {
-    entry.get(key).unwrap_or_else(|| panic!("missing field {key}")).as_str()
+    entry
+        .get(key)
+        .unwrap_or_else(|| panic!("missing field {key}"))
+        .as_str()
 }
 
 fn cc_available() -> bool {
@@ -186,7 +195,11 @@ fn run_fips205_reference_oracle(
         .arg(hex_encode_upper(seed_material))
         .arg(hex_encode_upper(msg))
         .arg(hex_encode_upper(ctx))
-        .arg(addrnd.map(hex_encode_upper).unwrap_or_else(|| "-".to_owned()))
+        .arg(
+            addrnd
+                .map(hex_encode_upper)
+                .unwrap_or_else(|| "-".to_owned()),
+        )
         .arg(ph.map(|ph| ph.identifier()).unwrap_or("-"))
         .output()
         .unwrap_or_else(|err| panic!("failed to execute FIPS 205 reference oracle: {err}"));
@@ -199,8 +212,8 @@ fn run_fips205_reference_oracle(
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let stdout =
-        String::from_utf8(output.stdout).unwrap_or_else(|err| panic!("invalid oracle stdout: {err}"));
+    let stdout = String::from_utf8(output.stdout)
+        .unwrap_or_else(|err| panic!("invalid oracle stdout: {err}"));
     let mut lines = stdout.lines();
     (
         hex_decode(lines.next().expect("missing oracle pk")),
@@ -300,8 +313,16 @@ fn assert_count0_case_matches_reference(variant: &str, params: &Params, binary: 
     );
     slh_verify_internal(&vk, &msg, &internal_sig, params).unwrap();
 
-    let (_, _, oracle_pure_sig) =
-        run_fips205_reference_oracle(binary, params, "pure", &seed_material, &msg, ctx, Some(&optrand), None);
+    let (_, _, oracle_pure_sig) = run_fips205_reference_oracle(
+        binary,
+        params,
+        "pure",
+        &seed_material,
+        &msg,
+        ctx,
+        Some(&optrand),
+        None,
+    );
     let pure_sig = slh_sign(&sk, &msg, ctx, Some(&optrand), params).unwrap();
     assert_eq!(
         &pure_sig.bytes[..params.n],
@@ -362,7 +383,10 @@ fn test_fips205_sha256_128s_count0_regression() {
         reference_root.join("slh_shake.c"),
     ];
     if let Some(missing) = required_paths.iter().find(|path| !path.exists()) {
-        eprintln!("skipping FIPS 205 reference parity: missing {}", missing.display());
+        eprintln!(
+            "skipping FIPS 205 reference parity: missing {}",
+            missing.display()
+        );
         return;
     }
 
@@ -406,7 +430,10 @@ fn test_fips205_count0_all_param_sets_internal_pure_and_prehash() {
         reference_root.join("slh_shake.c"),
     ]);
     if let Some(missing) = required_paths.iter().find(|path| !path.exists()) {
-        eprintln!("skipping FIPS 205 reference parity: missing {}", missing.display());
+        eprintln!(
+            "skipping FIPS 205 reference parity: missing {}",
+            missing.display()
+        );
         return;
     }
 
@@ -473,11 +500,26 @@ fn test_fips205_prehash_reference_all_algorithms() {
             Some(&optrand),
             Some(algorithm),
         );
-        assert_eq!(oracle_pk, vk.bytes, "{}: oracle pk drift", algorithm.identifier());
-        assert_eq!(oracle_sk, sk.bytes, "{}: oracle sk drift", algorithm.identifier());
+        assert_eq!(
+            oracle_pk,
+            vk.bytes,
+            "{}: oracle pk drift",
+            algorithm.identifier()
+        );
+        assert_eq!(
+            oracle_sk,
+            sk.bytes,
+            "{}: oracle sk drift",
+            algorithm.identifier()
+        );
 
         let sig = hash_slh_sign(&sk, msg, ctx, algorithm, Some(&optrand), &params).unwrap();
-        assert_eq!(sig.bytes, oracle_sig, "{}: prehash mismatch", algorithm.identifier());
+        assert_eq!(
+            sig.bytes,
+            oracle_sig,
+            "{}: prehash mismatch",
+            algorithm.identifier()
+        );
         hash_slh_verify(&vk, msg, &sig, ctx, algorithm, &params).unwrap();
     }
 
@@ -528,7 +570,9 @@ fn test_fips205_selected_deep_counts() {
 
             let seed: [u8; 48] = hex_decode(field(entry, "seed"))
                 .try_into()
-                .unwrap_or_else(|_| panic!("{variant} count={target_count}: invalid KAT seed length"));
+                .unwrap_or_else(|_| {
+                    panic!("{variant} count={target_count}: invalid KAT seed length")
+                });
             let msg = hex_decode(field(entry, "msg"));
 
             let mut kat_rng = NistKatDrbg::new(seed);
@@ -564,7 +608,8 @@ fn test_fips205_selected_deep_counts() {
                     "internal" => slh_sign_internal(&sk, &msg, Some(&optrand), params).unwrap(),
                     "pure" => slh_sign(&sk, &msg, ctx, Some(&optrand), params).unwrap(),
                     "prehash" => {
-                        hash_slh_sign(&sk, &msg, ctx, prehash.unwrap(), Some(&optrand), params).unwrap()
+                        hash_slh_sign(&sk, &msg, ctx, prehash.unwrap(), Some(&optrand), params)
+                            .unwrap()
                     }
                     _ => unreachable!(),
                 };

@@ -20,7 +20,7 @@ use tafrah_traits::Error;
 pub fn ml_dsa_sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<Signature, Error> {
     ml_dsa_sign_with_context(sk, msg, &[], rng, params)
@@ -31,7 +31,7 @@ pub fn ml_dsa_sign_with_context(
     sk: &SigningKey,
     msg: &[u8],
     ctx: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<Signature, Error> {
     params.validate()?;

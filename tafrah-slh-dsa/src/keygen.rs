@@ -1,7 +1,6 @@
 /// Generic SLH-DSA key generation entry point.
 ///
 /// Implements FIPS 205 Algorithm 18.
-
 extern crate alloc;
 use alloc::vec::Vec;
 
@@ -51,7 +50,7 @@ pub fn slh_keygen_internal(
 
 /// Generates an SLH-DSA verifying key and signing key pair.
 pub fn slh_dsa_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
     params: &Params,
 ) -> Result<(VerifyingKey, SigningKey), Error> {
     params.validate()?;

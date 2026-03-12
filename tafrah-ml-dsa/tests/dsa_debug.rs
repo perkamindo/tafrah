@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use rand::rngs::OsRng;
 use tafrah_math::poly::dsa::Poly;
 use tafrah_math::sampling::dsa;
 use tafrah_ml_dsa::encode;
@@ -53,7 +52,7 @@ fn hex_decode(hex: &str) -> Vec<u8> {
 #[test]
 fn test_dsa_debug_trace() {
     let params = &ML_DSA_44;
-    let mut rng = OsRng;
+    let mut rng = rand::rng();
 
     let (vk, sk) = ml_dsa_keygen(&mut rng, params).unwrap();
     eprintln!("VK bytes: {}", vk.bytes.len());
@@ -194,8 +193,8 @@ fn test_dsa_debug_trace() {
     for i in 0..k {
         let mut w1i = Poly::zero();
         for j in 0..256 {
-            w1i.coeffs[j] = hint::try_use_hint(hint_vec[i][j], w_approx[i].coeffs[j], alpha)
-                .unwrap();
+            w1i.coeffs[j] =
+                hint::try_use_hint(hint_vec[i][j], w_approx[i].coeffs[j], alpha).unwrap();
         }
         w1_prime.push(w1i);
     }

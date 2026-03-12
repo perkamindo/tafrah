@@ -1,6 +1,4 @@
-use crate::modp::{
-    modp_add, modp_montymul, modp_ninv31, modp_r2, modp_sub, SmallPrime,
-};
+use crate::modp::{modp_add, modp_montymul, modp_ninv31, modp_r2, modp_sub, SmallPrime};
 
 pub(crate) fn zint_sub(a: &mut [u32], b: &[u32], ctl: u32) -> u32 {
     debug_assert_eq!(a.len(), b.len());
@@ -25,12 +23,7 @@ pub(crate) fn zint_mul_small(m: &mut [u32], x: u32) -> u32 {
     cc
 }
 
-pub(crate) fn zint_mod_small_unsigned(
-    d: &[u32],
-    p: u32,
-    p0i: u32,
-    r2: u32,
-) -> u32 {
+pub(crate) fn zint_mod_small_unsigned(d: &[u32], p: u32, p0i: u32, r2: u32) -> u32 {
     let mut x = 0u32;
     for &word in d.iter().rev() {
         x = modp_montymul(x, r2, p, p0i);
@@ -41,13 +34,7 @@ pub(crate) fn zint_mod_small_unsigned(
     x
 }
 
-pub(crate) fn zint_mod_small_signed(
-    d: &[u32],
-    p: u32,
-    p0i: u32,
-    r2: u32,
-    rx: u32,
-) -> u32 {
+pub(crate) fn zint_mod_small_signed(d: &[u32], p: u32, p0i: u32, r2: u32, rx: u32) -> u32 {
     if d.is_empty() {
         return 0;
     }
@@ -207,12 +194,12 @@ pub(crate) fn zint_co_reduce_mod(
     let fa = ((a[0]
         .wrapping_mul(xa as u32)
         .wrapping_add(b[0].wrapping_mul(xb as u32)))
-        .wrapping_mul(m0i))
+    .wrapping_mul(m0i))
         & 0x7FFF_FFFF;
     let fb = ((a[0]
         .wrapping_mul(ya as u32)
         .wrapping_add(b[0].wrapping_mul(yb as u32)))
-        .wrapping_mul(m0i))
+    .wrapping_mul(m0i))
         & 0x7FFF_FFFF;
 
     for u in 0..len {
@@ -366,13 +353,7 @@ pub(crate) fn zint_bezout(
     (((1u32.wrapping_sub((rc | rc.wrapping_neg()) >> 31)) & x[0] & y[0]) & 1) != 0
 }
 
-pub(crate) fn zint_add_scaled_mul_small(
-    x: &mut [u32],
-    y: &[u32],
-    k: i32,
-    sch: u32,
-    scl: u32,
-) {
+pub(crate) fn zint_add_scaled_mul_small(x: &mut [u32], y: &[u32], k: i32, sch: u32, scl: u32) {
     if y.is_empty() {
         return;
     }
@@ -430,13 +411,13 @@ mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
     use rand::rngs::StdRng;
-    use rand::{RngCore, SeedableRng};
+    use rand::{Rng, SeedableRng};
 
     use super::{
         zint_add_mul_small, zint_add_scaled_mul_small, zint_bezout, zint_co_reduce,
         zint_co_reduce_mod, zint_finish_mod, zint_mod_small_signed, zint_mod_small_unsigned,
-        zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_crt,
-        zint_sub, zint_sub_scaled,
+        zint_mul_small, zint_negate, zint_norm_zero, zint_one_to_plain, zint_rebuild_crt, zint_sub,
+        zint_sub_scaled,
     };
     use crate::modp::{modp_ninv31, modp_r2, modp_rx, SmallPrime};
 
@@ -533,7 +514,10 @@ mod tests {
         let y = vec![7u32, 3u32];
         let mut x = vec![5u32, 2u32, 0u32];
         zint_add_mul_small(&mut x, &y, 9);
-        assert_eq!(decode_u128(&x), decode_u128(&[5, 2]) + decode_u128(&[7, 3]) * 9);
+        assert_eq!(
+            decode_u128(&x),
+            decode_u128(&[5, 2]) + decode_u128(&[7, 3]) * 9
+        );
 
         let mut v = vec![9u32, 0u32];
         let p = vec![11u32, 0u32];
@@ -546,8 +530,16 @@ mod tests {
         let value = 1_234_567_890_123u128;
         let residues = vec![(value % P0 as u128) as u32, (value % P1 as u128) as u32];
         let primes = [
-            SmallPrime { p: P0, g: 383_167_813, s: 10_239 },
-            SmallPrime { p: P1, g: 211_808_905, s: 471_403_745 },
+            SmallPrime {
+                p: P0,
+                g: 383_167_813,
+                s: 10_239,
+            },
+            SmallPrime {
+                p: P1,
+                g: 211_808_905,
+                s: 471_403_745,
+            },
         ];
         let mut xx = residues.clone();
         let mut tmp = vec![0u32; 2];
