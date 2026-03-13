@@ -347,7 +347,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "tafrah-falcon",
  "tafrah-hqc",
@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-falcon"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "libm",
  "rand_core",
@@ -370,7 +370,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-hqc"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "rand_core",
  "sha3",
@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-math"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "sha3",
  "subtle",
@@ -390,7 +390,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-ml-dsa"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "rand_core",
  "sha3",
@@ -402,7 +402,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-ml-kem"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "rand_core",
  "sha3",
@@ -417,13 +417,14 @@ name = "tafrah-rust-demo"
 version = "0.1.0"
 dependencies = [
  "rand",
+ "sha2",
  "subtle",
  "tafrah",
 ]
 
 [[package]]
 name = "tafrah-slh-dsa"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "hmac",
  "rand_core",
@@ -436,7 +437,7 @@ dependencies = [
 
 [[package]]
 name = "tafrah-traits"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "rand_core",
  "zeroize",

@@ -88,7 +88,9 @@ esac
 
 clang++ -std=c++17 -O2 \
   $TAFRAH_CFLAGS \
+  -I"$SCRIPT_DIR/native" \
   "$SCRIPT_DIR/cpp/main.cpp" \
+  "$SCRIPT_DIR/native/demo_core.cpp" \
   $TAFRAH_LIBS \
   -o "$BUILD_DIR/cpp/tafrah_cpp_demo"
 
@@ -150,7 +152,50 @@ node "$SCRIPT_DIR/js/example.mjs" "$BUILD_DIR/js/tafrah_node.node" > "$RESULTS_D
   CARGO_TARGET_DIR="$BUILD_DIR/rust-target" cargo run --quiet --offline > "$RESULTS_DIR/rust.json"
 )
 
+validate_result() {
+  language=$1
+  result_file=$2
+  python3 - "$language" "$result_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+language = sys.argv[1]
+result_file = Path(sys.argv[2])
+data = json.loads(result_file.read_text())
+required = [
+    "overall_ok",
+    "ml_kem_768_shared_secret_match",
+    "ml_kem_768_truncated_ct_rejected",
+    "symmetric_roundtrip_ok",
+    "hash_sha256_ok",
+    "hqc_128_shared_secret_match",
+    "hqc_128_truncated_ct_rejected",
+    "ml_dsa_65_verify_ok",
+    "ml_dsa_65_tamper_rejected",
+    "ml_dsa_65_truncated_sig_rejected",
+    "slh_dsa_shake_128f_verify_ok",
+    "slh_dsa_shake_128f_prehash_verify_ok",
+    "slh_dsa_shake_128f_prehash_tamper_rejected",
+    "slh_dsa_shake_128f_tamper_rejected",
+    "slh_dsa_shake_128f_truncated_sig_rejected",
+    "falcon_512_verify_ok",
+    "falcon_512_tamper_rejected",
+    "falcon_512_truncated_sig_rejected",
+]
+missing = [key for key in required if key not in data]
+if missing:
+    raise SystemExit(f"{language}: missing keys: {', '.join(missing)}")
+failed = [key for key in required if key != "overall_ok" and not data[key]]
+if failed:
+    raise SystemExit(f"{language}: failing checks: {', '.join(failed)}")
+if not data["overall_ok"]:
+    raise SystemExit(f"{language}: overall_ok=false")
+PY
+}
+
 for language in python cpp java kotlin go js rust; do
+  validate_result "$language" "$RESULTS_DIR/$language.json"
   printf '%s: ' "$language"
   cat "$RESULTS_DIR/$language.json"
 done

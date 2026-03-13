@@ -214,6 +214,12 @@ int tafrah_slh_dsa_shake_128f_sign(const uint8_t *sk_ptr, size_t sk_len,
 int tafrah_slh_dsa_shake_128f_verify(const uint8_t *vk_ptr, size_t vk_len,
                                      const uint8_t *msg_ptr, size_t msg_len,
                                      const uint8_t *sig_ptr, size_t sig_len);
+int tafrah_slh_dsa_shake_128f_hash_sha2_256_sign(
+    const uint8_t *sk_ptr, size_t sk_len, const uint8_t *msg_ptr, size_t msg_len,
+    uint8_t *sig_out, size_t sig_len);
+int tafrah_slh_dsa_shake_128f_hash_sha2_256_verify(
+    const uint8_t *vk_ptr, size_t vk_len, const uint8_t *msg_ptr, size_t msg_len,
+    const uint8_t *sig_ptr, size_t sig_len);
 int tafrah_slh_dsa_shake_192s_keygen(uint8_t *vk_out, size_t vk_len,
                                      uint8_t *sk_out, size_t sk_len);
 int tafrah_slh_dsa_shake_192s_sign(const uint8_t *sk_ptr, size_t sk_len,

@@ -13,15 +13,22 @@ env:
 
 jobs:
   test:
-    name: test-${{ matrix.os }}
+    name: test-${{ matrix.id }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+        include:
+          - id: linux-x86_64
+            os: ubuntu-24.04
+          - id: linux-aarch64
+            os: ubuntu-24.04-arm
+          - id: macos-aarch64
+            os: macos-15
+          - id: macos-x86_64
+            os: macos-15-intel
+          - id: windows-x86_64
+            os: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -34,14 +41,20 @@ jobs:
         run: cargo test
 
   reference-oracles:
-    name: reference-${{ matrix.os }}
+    name: reference-${{ matrix.id }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
+        include:
+          - id: linux-x86_64
+            os: ubuntu-24.04
+          - id: linux-aarch64
+            os: ubuntu-24.04-arm
+          - id: macos-aarch64
+            os: macos-15
+          - id: macos-x86_64
+            os: macos-15-intel
 
     steps:
       - uses: actions/checkout@v4
@@ -53,23 +66,36 @@ jobs:
         run: make test-reference
 
   native-artifacts:
-    name: native-${{ matrix.os }}
+    name: native-${{ matrix.id }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            id: linux
+          - os: ubuntu-24.04
+            id: linux-x86_64
             abi_lib: libtafrah_abi.so
+            abi_static_lib: libtafrah_abi.a
             uniffi_lib: libtafrah_uniffi.so
-          - os: macos-latest
-            id: macos
+          - os: ubuntu-24.04-arm
+            id: linux-aarch64
+            abi_lib: libtafrah_abi.so
+            abi_static_lib: libtafrah_abi.a
+            uniffi_lib: libtafrah_uniffi.so
+          - os: macos-15
+            id: macos-aarch64
             abi_lib: libtafrah_abi.dylib
+            abi_static_lib: libtafrah_abi.a
+            uniffi_lib: libtafrah_uniffi.dylib
+          - os: macos-15-intel
+            id: macos-x86_64
+            abi_lib: libtafrah_abi.dylib
+            abi_static_lib: libtafrah_abi.a
             uniffi_lib: libtafrah_uniffi.dylib
           - os: windows-latest
-            id: windows
+            id: windows-x86_64
             abi_lib: tafrah_abi.dll
+            abi_static_lib: tafrah_abi.lib
             uniffi_lib: tafrah_uniffi.dll
 
     steps:
@@ -90,6 +116,7 @@ jobs:
           set -euo pipefail
           bash ./scripts/install-abi.sh "$PWD/dist/install"
           test -f "dist/install/lib/${{ matrix.abi_lib }}"
+          test -f "dist/install/lib/${{ matrix.abi_static_lib }}"
           cp "target/release/${{ matrix.uniffi_lib }}" "dist/install/lib/"
 
       - uses: actions/upload-artifact@v4
@@ -105,7 +132,7 @@ jobs:
       matrix:
         include:
           - name: avx2-linux-x64
-            os: ubuntu-latest
+            os: ubuntu-24.04
             bench_features: avx2
             artifact_name: simd-bench-avx2-linux-x64
 
@@ -136,13 +163,13 @@ jobs:
       matrix:
         include:
           - name: python
-            os: ubuntu-latest
+            os: ubuntu-24.04
             language: python
           - name: kotlin
-            os: ubuntu-latest
+            os: ubuntu-24.04
             language: kotlin
           - name: swift
-            os: macos-latest
+            os: macos-15
             language: swift
 
     steps:

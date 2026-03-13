@@ -21,12 +21,25 @@ Then point your build system at:
 - `dist/install/lib`
 - `dist/install/lib/pkgconfig`
 
+The install prefix contains:
+
+- a shared ABI library:
+  - Linux: `libtafrah_abi.so`
+  - macOS: `libtafrah_abi.dylib`
+  - Windows: `tafrah_abi.dll`
+- a static ABI library:
+  - Linux: `libtafrah_abi.a`
+  - macOS: `libtafrah_abi.a`
+  - Windows: `tafrah_abi.lib`
+
 ## Design Notes
 
 - Caller-owned buffers are used throughout.
 - Buffer lengths are validated explicitly.
 - Status codes are stable and translated to strings by `tafrah_status_string`.
 - Falcon detached signatures use `sig_capacity` plus `sig_written` because Falcon signatures are variable-length.
+- GitHub Release assets are architecture-specific. If no prebuilt asset matches
+  the target machine, build from source and install locally.
 
 ## Current Example Coverage
 

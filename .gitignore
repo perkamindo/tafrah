@@ -5,6 +5,7 @@
 /examples/auth-demo/build/
 /examples/auth-demo/results/
 /examples/auth-demo/__pycache__/
+/examples/auth-demo/rust/target/
 /AUDIT_REVIEW.md
 /AUDIT_REVIEW_v2.md
 /AUDIT_REVIEW_v3_final.md

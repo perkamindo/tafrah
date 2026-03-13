@@ -36,6 +36,7 @@ That installs:
 - `include/tafrah_abi.h`
 - `include/tafrah_ffi.h` compatibility shim
 - `lib/libtafrah_abi.{so,dylib}` or `tafrah_abi.dll`
+- `lib/libtafrah_abi.a` or `tafrah_abi.lib`
 - `lib/pkgconfig/tafrah.pc`
 
 Consumers that support `pkg-config` can use the installed prefix directly.
@@ -48,3 +49,22 @@ make examples
 ```
 
 That path is the closest thing to an end-to-end repository smoke test for non-Rust consumers.
+
+## Prebuilt Releases
+
+GitHub Release assets are architecture-specific. The current release workflow
+targets:
+
+- Linux `x86_64`
+- Linux `aarch64`
+- macOS `arm64`
+- macOS `x86_64`
+- Windows `x86_64`
+
+If the repository does not publish a matching asset for the target machine, the
+recommended fallback is to build from source from the workspace root:
+
+```sh
+make test
+make install PREFIX="$PWD/dist/install"
+```

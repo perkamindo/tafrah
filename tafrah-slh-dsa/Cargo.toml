@@ -1,6 +1,6 @@
 [package]
 name = "tafrah-slh-dsa"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 description = "SLH-DSA (FIPS 205) implementation for the Tafrah PQC library"
 authors.workspace = true

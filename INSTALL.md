@@ -63,6 +63,12 @@ Installed files:
 - `dist/install/include/tafrah/`
 - `dist/install/lib/pkgconfig/tafrah.pc`
 
+The install prefix contains both a shared ABI library and a static ABI library:
+
+- Linux: `libtafrah_abi.so` and `libtafrah_abi.a`
+- macOS: `libtafrah_abi.dylib` and `libtafrah_abi.a`
+- Windows: `tafrah_abi.dll` and `tafrah_abi.lib`
+
 ## Build UniFFI
 
 Build the UniFFI shared library:
@@ -99,6 +105,18 @@ make demo-python
 
 ## Platform Notes
 
-- The primary hosted CI targets are currently macOS and Ubuntu.
-- Windows support remains part of the release plan, but the main workflow is intentionally focused first on the macOS and Linux release path.
+- GitHub Release assets are architecture-specific, not universal.
+- The current hosted release/CI matrix targets:
+  - Linux `x86_64`
+  - Linux `aarch64`
+  - macOS `arm64`
+  - macOS `x86_64`
+  - Windows `x86_64`
+- If no matching GitHub Release asset exists for the target machine, build from source:
+
+```sh
+make test
+make install PREFIX="$PWD/dist/install"
+```
+
 - Rust consumers should use the native `tafrah` crate directly instead of going through the C ABI layer.

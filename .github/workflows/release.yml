@@ -14,15 +14,22 @@ env:
 
 jobs:
   verify:
-    name: verify-${{ matrix.os }}
+    name: verify-${{ matrix.id }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+        include:
+          - id: linux-x86_64
+            os: ubuntu-24.04
+          - id: linux-aarch64
+            os: ubuntu-24.04-arm
+          - id: macos-aarch64
+            os: macos-15
+          - id: macos-x86_64
+            os: macos-15-intel
+          - id: windows-x86_64
+            os: windows-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -42,19 +49,34 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - id: linux
-            os: ubuntu-latest
+          - id: linux-x86_64
+            os: ubuntu-24.04
             abi_lib: libtafrah_abi.so
+            abi_static_lib: libtafrah_abi.a
             uniffi_lib: libtafrah_uniffi.so
             archive_ext: tar.gz
-          - id: macos
-            os: macos-latest
+          - id: linux-aarch64
+            os: ubuntu-24.04-arm
+            abi_lib: libtafrah_abi.so
+            abi_static_lib: libtafrah_abi.a
+            uniffi_lib: libtafrah_uniffi.so
+            archive_ext: tar.gz
+          - id: macos-aarch64
+            os: macos-15
             abi_lib: libtafrah_abi.dylib
+            abi_static_lib: libtafrah_abi.a
             uniffi_lib: libtafrah_uniffi.dylib
             archive_ext: tar.gz
-          - id: windows
+          - id: macos-x86_64
+            os: macos-15-intel
+            abi_lib: libtafrah_abi.dylib
+            abi_static_lib: libtafrah_abi.a
+            uniffi_lib: libtafrah_uniffi.dylib
+            archive_ext: tar.gz
+          - id: windows-x86_64
             os: windows-latest
             abi_lib: tafrah_abi.dll
+            abi_static_lib: tafrah_abi.lib
             uniffi_lib: tafrah_uniffi.dll
             archive_ext: zip
 
@@ -78,6 +100,7 @@ jobs:
           set -euo pipefail
           bash ./scripts/install-abi.sh "$PWD/dist/install"
           test -f "dist/install/lib/${{ matrix.abi_lib }}"
+          test -f "dist/install/lib/${{ matrix.abi_static_lib }}"
           cp "target/release/${{ matrix.uniffi_lib }}" "dist/install/lib/"
           if [ "${{ matrix.archive_ext }}" = "zip" ]; then
             pwsh -NoLogo -NoProfile -Command "Compress-Archive -Path 'dist/install/*' -DestinationPath 'tafrah-${{ github.ref_name }}-${{ matrix.id }}.${{ matrix.archive_ext }}'"

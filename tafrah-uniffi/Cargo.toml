@@ -1,6 +1,6 @@
 [package]
 name = "tafrah-uniffi"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 description = "UniFFI host bindings for Tafrah PQC primitives"
 authors.workspace = true

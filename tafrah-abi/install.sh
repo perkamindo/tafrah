@@ -10,14 +10,17 @@ cargo build -p tafrah-abi --release
 case "$(uname -s)" in
   Darwin)
     LIB_NAME=libtafrah_abi.dylib
+    STATIC_LIB_NAME=libtafrah_abi.a
     LEGACY_LIB_NAME=libtafrah_ffi.dylib
     ;;
   Linux)
     LIB_NAME=libtafrah_abi.so
+    STATIC_LIB_NAME=libtafrah_abi.a
     LEGACY_LIB_NAME=libtafrah_ffi.so
     ;;
   MINGW*|MSYS*|CYGWIN*)
     LIB_NAME=tafrah_abi.dll
+    STATIC_LIB_NAME=tafrah_abi.lib
     LEGACY_LIB_NAME=tafrah_ffi.dll
     ;;
   *)
@@ -33,6 +36,7 @@ cp "$SCRIPT_DIR/include/tafrah_ffi.h" "$PREFIX/include/tafrah_ffi.h"
 cp "$SCRIPT_DIR/include/tafrah/tafrah.h" "$PREFIX/include/tafrah/tafrah.h"
 cp "$SCRIPT_DIR/include/tafrah/tafrah.hpp" "$PREFIX/include/tafrah/tafrah.hpp"
 cp "$SCRIPT_DIR/../target/release/$LIB_NAME" "$PREFIX/lib/$LIB_NAME"
+cp "$SCRIPT_DIR/../target/release/$STATIC_LIB_NAME" "$PREFIX/lib/$STATIC_LIB_NAME"
 cp "$SCRIPT_DIR/../target/release/$LIB_NAME" "$PREFIX/lib/$LEGACY_LIB_NAME"
 
 sed \

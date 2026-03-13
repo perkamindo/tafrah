@@ -2,6 +2,33 @@
 
 All notable changes to Tafrah are documented in this file.
 
+## [Unreleased]
+
+## [0.1.8] - 2026-03-13
+
+### Added
+
+- Added architecture-specific release and CI planning for Linux `x86_64`,
+  Linux `aarch64`, macOS `arm64`, and macOS `x86_64`, with explicit asset
+  naming instead of generic OS-only archives.
+- Added platform and embedded guidance in `docs/platform-support.md` and
+  `docs/embedded.md`.
+- Added static ABI library packaging alongside the shared ABI library in the
+  install layout.
+- Added `HashSLH-DSA` example coverage for the FIPS 205 `SLH-DSA-SHAKE-128f`
+  profile across the ABI layer and all language examples.
+- Added ABI smoke coverage for the `HashSLH-DSA` exported proof profile.
+
+### Changed
+
+- Clarified in the root installation docs that GitHub Release assets are
+  architecture-specific and that source builds are the official fallback when no
+  matching asset exists.
+- Updated the published README so crates.io documentation links resolve to
+  stable GitHub URLs instead of relative paths rewritten through `HEAD`.
+- Synchronized all public workspace crate versions, ABI metadata, and example
+  output version strings to `0.1.8`.
+
 ## [0.1.7] - 2026-03-13
 
 ### Added

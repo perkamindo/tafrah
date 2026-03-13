@@ -53,18 +53,23 @@ Common root targets:
 
 ## Documentation
 
-- [INSTALL.md](INSTALL.md)
-- [docs/README.md](docs/README.md)
-- [docs/performance.md](docs/performance.md)
-- [docs/security.md](docs/security.md)
-- [SECURITY.md](SECURITY.md)
-- [CHANGELOG.md](CHANGELOG.md)
+- [INSTALL.md](https://github.com/perkamindo/tafrah/blob/master/INSTALL.md)
+- [docs/README.md](https://github.com/perkamindo/tafrah/blob/master/docs/README.md)
+- [docs/platform-support.md](https://github.com/perkamindo/tafrah/blob/master/docs/platform-support.md)
+- [docs/embedded.md](https://github.com/perkamindo/tafrah/blob/master/docs/embedded.md)
+- [docs/performance.md](https://github.com/perkamindo/tafrah/blob/master/docs/performance.md)
+- [docs/security.md](https://github.com/perkamindo/tafrah/blob/master/docs/security.md)
+- [SECURITY.md](https://github.com/perkamindo/tafrah/blob/master/SECURITY.md)
+- [CHANGELOG.md](https://github.com/perkamindo/tafrah/blob/master/CHANGELOG.md)
 
 ## Examples
 
-Beginner-friendly examples and proof scripts live in [examples/README.md](examples/README.md).
+Beginner-friendly examples and proof scripts live in
+[examples/README.md](https://github.com/perkamindo/tafrah/blob/master/examples/README.md).
 
-The primary example bundle is [examples/auth-demo/README.md](examples/auth-demo/README.md). It includes:
+The primary example bundle is
+[examples/auth-demo/README.md](https://github.com/perkamindo/tafrah/blob/master/examples/auth-demo/README.md).
+It includes:
 
 - a direct Rust crate example
 - a Python `ctypes` wrapper
@@ -76,6 +81,7 @@ The primary example bundle is [examples/auth-demo/README.md](examples/auth-demo/
 `tafrah-abi` installs into a prefix with the following layout:
 
 - `lib/libtafrah_abi.{so,dylib}` or `tafrah_abi.dll`
+- `lib/libtafrah_abi.a` or `tafrah_abi.lib`
 - `include/tafrah/tafrah.h`
 - `include/tafrah/tafrah.hpp`
 - `include/tafrah_abi.h`
@@ -87,5 +93,27 @@ For a local install:
 ```sh
 make install PREFIX="$PWD/dist/install"
 ```
+
+## Prebuilt Releases And Source Builds
+
+GitHub Release assets are architecture-specific. Current release packaging is
+planned around:
+
+- Linux `x86_64`
+- Linux `aarch64`
+- macOS `arm64`
+- macOS `x86_64`
+- Windows `x86_64`
+
+If no prebuilt asset matches the target machine, build from source from the
+repository root:
+
+```sh
+make test
+make install PREFIX="$PWD/dist/install"
+```
+
+For Rust consumers, prefer the native crates from crates.io instead of the ABI
+layer.
 
 WARNING: FN-DSA (FIPS 206) and HQC (FIPS 207) have been selected by NIST but the standards are not yet finalized. This implementation follows the currently available specifications and may change once the official standards are published. Backward compatibility is not guaranteed.

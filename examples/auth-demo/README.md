@@ -8,9 +8,11 @@ The examples focus on proof of use, not on packaging or framework integration.
 
 - FIPS 203 with `ML-KEM-768` for key exchange and file-encryption key derivation
 - FIPS 204 with `ML-DSA-65` for signatures
-- FIPS 205 with `SLH-DSA-SHAKE-128f` for signatures
+- FIPS 205 with `SLH-DSA-SHAKE-128f` for pure signatures and `HashSLH-DSA` pre-hash signatures
 - FIPS 206 with `Falcon-512` for signatures
 - FIPS 207 with `HQC-128` for KEM smoke coverage across language examples
+- proof-only symmetric encryption/decryption roundtrips derived from KEM shared secrets
+- host-side SHA-256 hashing checks for a fixed demo payload
 
 ## Directory Layout
 
@@ -57,6 +59,8 @@ sh run_language_examples.sh
 - simulates a small client/server chat exchange
 - encrypts and recovers a sample file
 - signs and verifies with ML-DSA, SLH-DSA, and Falcon
+- exercises both pure SLH-DSA and HashSLH-DSA for the FIPS 205 example profile
+- checks malformed/truncated ciphertext and signature handling through the ABI
 - prints small latency measurements
 
 `run_language_examples.sh`
@@ -64,6 +68,13 @@ sh run_language_examples.sh
 - installs `tafrah-abi` into a local prefix under `build/prefix`
 - compiles or prepares the Python, C++, Java, Kotlin, Go, JavaScript, and Rust examples
 - runs each example and writes JSON results under `results/`
+- validates that each example reports:
+  - asymmetric success paths
+  - symmetric roundtrip success
+  - host-side hash success
+  - HashSLH-DSA success for the FIPS 205 profile
+  - tamper rejection
+  - malformed-input rejection
 
 Generated directories such as `build/`, `results/`, `artifacts/`, and `__pycache__/` are ignored and can be deleted safely between runs.
 

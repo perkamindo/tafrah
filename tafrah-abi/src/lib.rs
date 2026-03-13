@@ -31,6 +31,7 @@ use tafrah_slh_dsa::params::{
     SLH_DSA_SHAKE_128S, SLH_DSA_SHAKE_192F, SLH_DSA_SHAKE_192S, SLH_DSA_SHAKE_256F,
     SLH_DSA_SHAKE_256S,
 };
+use tafrah_slh_dsa::prehash::{hash_slh_sign, hash_slh_verify, PrehashAlgorithm};
 use tafrah_slh_dsa::types::{
     Signature as SlhDsaSignature, SigningKey as SlhDsaSigningKey,
     VerifyingKey as SlhDsaVerifyingKey,
@@ -45,7 +46,7 @@ pub const TAFRAH_STATUS_VERIFICATION_FAILED: c_int = 4;
 pub const TAFRAH_STATUS_INTERNAL_ERROR: c_int = 5;
 pub const TAFRAH_STATUS_NOT_IMPLEMENTED: c_int = 6;
 
-const VERSION: &[u8] = b"tafrah-abi/0.1.7\0";
+const VERSION: &[u8] = b"tafrah-abi/0.1.8\0";
 const STATUS_OK: &[u8] = b"ok\0";
 const STATUS_NULL_POINTER: &[u8] = b"null pointer\0";
 const STATUS_INVALID_LENGTH: &[u8] = b"invalid length\0";
@@ -408,6 +409,69 @@ where
     let vk = SlhDsaVerifyingKey::from_bytes(vk_bytes.to_vec());
     let sig = SlhDsaSignature::from_bytes(sig_bytes.to_vec());
     match verify(&vk, msg_bytes, &sig) {
+        Ok(()) => TAFRAH_STATUS_OK,
+        Err(err) => status_from_error(err),
+    }
+}
+
+fn slh_dsa_prehash_sign_inner(
+    sk_ptr: *const u8,
+    sk_len: usize,
+    msg_ptr: *const u8,
+    msg_len: usize,
+    sig_out: *mut u8,
+    sig_len: usize,
+    params: &SlhDsaParams,
+    ph: PrehashAlgorithm,
+) -> c_int {
+    let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_bytes) } {
+        Ok(bytes) => bytes,
+        Err(status) => return status,
+    };
+    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+        Ok(bytes) => bytes,
+        Err(status) => return status,
+    };
+    let sig_out = match unsafe { output_bytes_exact(sig_out, sig_len, params.sig_bytes) } {
+        Ok(bytes) => bytes,
+        Err(status) => return status,
+    };
+
+    let sk = SlhDsaSigningKey::from_bytes(sk_bytes.to_vec());
+    let mut opt_rand = vec![0u8; params.n];
+    rand::fill(&mut opt_rand[..]);
+    match hash_slh_sign(&sk, msg_bytes, &[], ph, Some(&opt_rand), params) {
+        Ok(sig) => copy_result(sig.as_bytes(), sig_out),
+        Err(err) => status_from_error(err),
+    }
+}
+
+fn slh_dsa_prehash_verify_inner(
+    vk_ptr: *const u8,
+    vk_len: usize,
+    msg_ptr: *const u8,
+    msg_len: usize,
+    sig_ptr: *const u8,
+    sig_len: usize,
+    params: &SlhDsaParams,
+    ph: PrehashAlgorithm,
+) -> c_int {
+    let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.pk_bytes) } {
+        Ok(bytes) => bytes,
+        Err(status) => return status,
+    };
+    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+        Ok(bytes) => bytes,
+        Err(status) => return status,
+    };
+    let sig_bytes = match unsafe { input_bytes_exact(sig_ptr, sig_len, params.sig_bytes) } {
+        Ok(bytes) => bytes,
+        Err(status) => return status,
+    };
+
+    let vk = SlhDsaVerifyingKey::from_bytes(vk_bytes.to_vec());
+    let sig = SlhDsaSignature::from_bytes(sig_bytes.to_vec());
+    match hash_slh_verify(&vk, msg_bytes, &sig, &[], ph, params) {
         Ok(()) => TAFRAH_STATUS_OK,
         Err(err) => status_from_error(err),
     }
@@ -1065,6 +1129,48 @@ export_slh_dsa_abi!(
     tafrah_slh_dsa_shake_128f_verify,
     SLH_DSA_SHAKE_128F
 );
+
+#[no_mangle]
+pub extern "C" fn tafrah_slh_dsa_shake_128f_hash_sha2_256_sign(
+    sk_ptr: *const u8,
+    sk_len: usize,
+    msg_ptr: *const u8,
+    msg_len: usize,
+    sig_out: *mut u8,
+    sig_len: usize,
+) -> c_int {
+    slh_dsa_prehash_sign_inner(
+        sk_ptr,
+        sk_len,
+        msg_ptr,
+        msg_len,
+        sig_out,
+        sig_len,
+        &SLH_DSA_SHAKE_128F,
+        PrehashAlgorithm::Sha2_256,
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn tafrah_slh_dsa_shake_128f_hash_sha2_256_verify(
+    vk_ptr: *const u8,
+    vk_len: usize,
+    msg_ptr: *const u8,
+    msg_len: usize,
+    sig_ptr: *const u8,
+    sig_len: usize,
+) -> c_int {
+    slh_dsa_prehash_verify_inner(
+        vk_ptr,
+        vk_len,
+        msg_ptr,
+        msg_len,
+        sig_ptr,
+        sig_len,
+        &SLH_DSA_SHAKE_128F,
+        PrehashAlgorithm::Sha2_256,
+    )
+}
 
 export_slh_dsa_abi!(
     tafrah_slh_dsa_shake_192s_vk_size,

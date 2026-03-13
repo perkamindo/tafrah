@@ -1,6 +1,6 @@
 [package]
 name = "tafrah-abi"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 description = "C ABI layer for Tafrah PQC primitives"
 authors.workspace = true
@@ -10,7 +10,7 @@ homepage.workspace = true
 readme.workspace = true
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 rand = { workspace = true }

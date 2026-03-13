@@ -206,8 +206,13 @@ def run_signature_proof(abi: TafrahABI, transcript: bytes, file_digest_hex: str)
     assert not abi.ml_dsa_65_verify(ml_dsa_vk, ml_dsa_message + b"\x01", ml_dsa_sig)
 
     slh_sig = abi.slh_dsa_shake_128f_sign(slh_sk, slh_message)
+    slh_prehash_sig = abi.slh_dsa_shake_128f_hash_sha2_256_sign(slh_sk, slh_message)
     assert abi.slh_dsa_shake_128f_verify(slh_vk, slh_message, slh_sig)
+    assert abi.slh_dsa_shake_128f_hash_sha2_256_verify(slh_vk, slh_message, slh_prehash_sig)
     assert not abi.slh_dsa_shake_128f_verify(slh_vk, slh_message + b"\x02", slh_sig)
+    assert not abi.slh_dsa_shake_128f_hash_sha2_256_verify(
+        slh_vk, slh_message + b"\x04", slh_prehash_sig
+    )
 
     falcon_sig = abi.falcon_512_sign(falcon_sk, falcon_message)
     assert abi.falcon_512_verify(falcon_vk, falcon_message, falcon_sig)
@@ -220,9 +225,59 @@ def run_signature_proof(abi: TafrahABI, transcript: bytes, file_digest_hex: str)
         "ml_dsa_verify_ok": True,
         "ml_dsa_tamper_rejected": True,
         "slh_dsa_verify_ok": True,
+        "slh_dsa_prehash_verify_ok": True,
+        "slh_dsa_prehash_tamper_rejected": True,
         "slh_dsa_tamper_rejected": True,
         "falcon_512_verify_ok": True,
         "falcon_512_tamper_rejected": True,
+    }
+
+
+def run_negative_abi_proof(abi: TafrahABI) -> dict[str, bool]:
+    kem_ek, kem_dk = abi.ml_kem_768_keygen()
+    kem_ct, _ = abi.ml_kem_768_encapsulate(kem_ek)
+
+    hqc_ek, hqc_dk = abi.hqc_128_keygen()
+    hqc_ct, _ = abi.hqc_128_encapsulate(hqc_ek)
+
+    ml_msg = b"tafrah-auth-demo::ml-dsa-65"
+    ml_vk, ml_sk = abi.ml_dsa_65_keygen()
+    ml_sig = abi.ml_dsa_65_sign(ml_sk, ml_msg)
+
+    slh_msg = b"tafrah-auth-demo::slh-dsa-shake-128f"
+    slh_vk, slh_sk = abi.slh_dsa_shake_128f_keygen()
+    slh_sig = abi.slh_dsa_shake_128f_sign(slh_sk, slh_msg)
+
+    falcon_msg = b"tafrah-auth-demo::falcon-512"
+    falcon_vk, falcon_sk = abi.falcon_512_keygen()
+    falcon_sig = abi.falcon_512_sign(falcon_sk, falcon_msg)
+
+    return {
+        "ml_kem_768_truncated_ct_rejected": abi.expect_status(
+            abi.ml_kem_768_decapsulate_status(kem_dk, kem_ct[:-1]),
+            abi.STATUS_INVALID_LENGTH,
+            "tafrah_ml_kem_768_decapsulate_truncated",
+        ),
+        "hqc_128_truncated_ct_rejected": abi.expect_status(
+            abi.hqc_128_decapsulate_status(hqc_dk, hqc_ct[:-1]),
+            abi.STATUS_INVALID_LENGTH,
+            "tafrah_hqc_128_decapsulate_truncated",
+        ),
+        "ml_dsa_65_truncated_sig_rejected": abi.expect_status(
+            abi.ml_dsa_65_verify_status(ml_vk, ml_msg, ml_sig[:-1]),
+            abi.STATUS_INVALID_LENGTH,
+            "tafrah_ml_dsa_65_verify_truncated_sig",
+        ),
+        "slh_dsa_shake_128f_truncated_sig_rejected": abi.expect_status(
+            abi.slh_dsa_shake_128f_verify_status(slh_vk, slh_msg, slh_sig[:-1]),
+            abi.STATUS_INVALID_LENGTH,
+            "tafrah_slh_dsa_shake_128f_verify_truncated_sig",
+        ),
+        "falcon_512_truncated_sig_rejected": abi.expect_status(
+            abi.falcon_512_verify_status(falcon_vk, falcon_msg, falcon_sig[:-1]),
+            abi.STATUS_INVALID_LENGTH,
+            "tafrah_falcon_512_verify_truncated_sig",
+        ),
     }
 
 
@@ -258,7 +313,14 @@ def run_benchmarks(abi: TafrahABI) -> list[Benchmark]:
     ]
 
 
-def print_report(abi: TafrahABI, chat: dict[str, object], file_proof: dict[str, object], sigs: dict[str, object], benches: list[Benchmark]) -> None:
+def print_report(
+    abi: TafrahABI,
+    chat: dict[str, object],
+    file_proof: dict[str, object],
+    sigs: dict[str, object],
+    negative: dict[str, bool],
+    benches: list[Benchmark],
+) -> None:
     print("== Tafrah ctypes ABI proof ==")
     print(f"native_version: {abi.version}")
     print(f"library_path: {abi.default_library_path()}")
@@ -271,7 +333,19 @@ def print_report(abi: TafrahABI, chat: dict[str, object], file_proof: dict[str, 
     print(f"file_sha3_256: {file_proof['sha3_256']}")
     print(f"ml_dsa_verify_ok: {sigs['ml_dsa_verify_ok']}")
     print(f"slh_dsa_verify_ok: {sigs['slh_dsa_verify_ok']}")
+    print(f"slh_dsa_prehash_verify_ok: {sigs['slh_dsa_prehash_verify_ok']}")
     print(f"falcon_512_verify_ok: {sigs['falcon_512_verify_ok']}")
+    print()
+
+    print("== Negative Paths ==")
+    print(f"ml_kem_768_truncated_ct_rejected: {negative['ml_kem_768_truncated_ct_rejected']}")
+    print(f"hqc_128_truncated_ct_rejected: {negative['hqc_128_truncated_ct_rejected']}")
+    print(f"ml_dsa_65_truncated_sig_rejected: {negative['ml_dsa_65_truncated_sig_rejected']}")
+    print(
+        "slh_dsa_shake_128f_truncated_sig_rejected: "
+        f"{negative['slh_dsa_shake_128f_truncated_sig_rejected']}"
+    )
+    print(f"falcon_512_truncated_sig_rejected: {negative['falcon_512_truncated_sig_rejected']}")
     print()
 
     print("== Sizes ==")
@@ -287,13 +361,23 @@ def print_report(abi: TafrahABI, chat: dict[str, object], file_proof: dict[str, 
     print()
 
     print("== Assessment ==")
-    print("correctness: native PQC primitives survive a foreign-language roundtrip and reject tampered signatures.")
+    print(
+        "correctness: native PQC primitives survive a foreign-language roundtrip, "
+        "reject tampered signatures, and reject malformed ciphertext/signature lengths."
+    )
     print("security: the ABI surface is fixed-size and explicit; the Python symmetric layer uses HMAC-SHA3-256 based derivation but remains proof-only, not a final production design.")
     print("maintainability: the ABI is intentionally narrow and maps directly to a small set of stable proof primitives.")
     print("developer_experience: no Python dependencies beyond stdlib, and the wrapper can auto-build the native library.")
 
 
-def write_summary(abi: TafrahABI, chat: dict[str, object], file_proof: dict[str, object], sigs: dict[str, object], benches: list[Benchmark]) -> None:
+def write_summary(
+    abi: TafrahABI,
+    chat: dict[str, object],
+    file_proof: dict[str, object],
+    sigs: dict[str, object],
+    negative: dict[str, bool],
+    benches: list[Benchmark],
+) -> None:
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     summary = {
         "native_version": abi.version,
@@ -301,11 +385,14 @@ def write_summary(abi: TafrahABI, chat: dict[str, object], file_proof: dict[str,
             "shared_secret_match": chat["shared_secret_match"],
             "ml_dsa_verify_ok": sigs["ml_dsa_verify_ok"],
             "slh_dsa_verify_ok": sigs["slh_dsa_verify_ok"],
+            "slh_dsa_prehash_verify_ok": sigs["slh_dsa_prehash_verify_ok"],
             "ml_dsa_tamper_rejected": sigs["ml_dsa_tamper_rejected"],
             "slh_dsa_tamper_rejected": sigs["slh_dsa_tamper_rejected"],
+            "slh_dsa_prehash_tamper_rejected": sigs["slh_dsa_prehash_tamper_rejected"],
             "falcon_512_verify_ok": sigs["falcon_512_verify_ok"],
             "falcon_512_tamper_rejected": sigs["falcon_512_tamper_rejected"],
         },
+        "negative_paths": negative,
         "artifacts": file_proof,
         "sizes": {
             "ml_kem_768_ct_bytes": chat["kem_ciphertext_bytes"],
@@ -315,7 +402,7 @@ def write_summary(abi: TafrahABI, chat: dict[str, object], file_proof: dict[str,
         },
         "benchmarks_ms": {bench.label: round(bench.average_ms, 3) for bench in benches},
         "assessment": {
-            "correctness": "Cross-language PQC operations succeed and tampering is rejected.",
+            "correctness": "Cross-language PQC operations succeed, tampering is rejected, and malformed ciphertext/signature lengths are rejected.",
             "security": "The ABI validates lengths explicitly; Python transport and file crypto remain proof-only.",
             "maintainability": "The ABI is narrow and maps one-to-one to the demo primitives.",
             "developer_experience": "Native build is a single cargo command and Python uses only ctypes + stdlib.",
@@ -329,9 +416,10 @@ def main() -> None:
     chat = run_chat_proof(abi)
     file_proof = run_file_proof(abi)
     sigs = run_signature_proof(abi, chat["transcript"], file_proof["sha3_256"])
+    negative = run_negative_abi_proof(abi)
     benches = run_benchmarks(abi)
-    print_report(abi, chat, file_proof, sigs, benches)
-    write_summary(abi, chat, file_proof, sigs, benches)
+    print_report(abi, chat, file_proof, sigs, negative, benches)
+    write_summary(abi, chat, file_proof, sigs, negative, benches)
 
 
 if __name__ == "__main__":

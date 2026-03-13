@@ -31,6 +31,8 @@ use tafrah_abi::{
     tafrah_slh_dsa_sha2_256f_sk_size, tafrah_slh_dsa_sha2_256f_vk_size,
     tafrah_slh_dsa_sha2_256s_sig_size, tafrah_slh_dsa_sha2_256s_sk_size,
     tafrah_slh_dsa_sha2_256s_vk_size, tafrah_slh_dsa_shake_128f_keygen,
+    tafrah_slh_dsa_shake_128f_hash_sha2_256_sign,
+    tafrah_slh_dsa_shake_128f_hash_sha2_256_verify,
     tafrah_slh_dsa_shake_128f_sig_size, tafrah_slh_dsa_shake_128f_sign,
     tafrah_slh_dsa_shake_128f_sk_size, tafrah_slh_dsa_shake_128f_verify,
     tafrah_slh_dsa_shake_128f_vk_size, tafrah_slh_dsa_shake_128s_sig_size,
@@ -192,6 +194,59 @@ fn run_slh_sign_verify(
             sig.len(),
         ),
         TAFRAH_STATUS_OK
+    );
+}
+
+fn run_slh_prehash_sign_verify(
+    vk_size: usize,
+    sk_size: usize,
+    sig_size: usize,
+    keygen: SlhKeygenFn,
+    sign: SlhSignFn,
+    verify: SlhVerifyFn,
+) {
+    let mut vk = vec![0u8; vk_size];
+    let mut sk = vec![0u8; sk_size];
+    let mut sig = vec![0u8; sig_size];
+    let msg = b"slh abi prehash proof message";
+    let wrong_msg = b"slh abi prehash proof message tampered";
+
+    assert_eq!(
+        keygen(vk.as_mut_ptr(), vk.len(), sk.as_mut_ptr(), sk.len()),
+        TAFRAH_STATUS_OK
+    );
+    assert_eq!(
+        sign(
+            sk.as_ptr(),
+            sk.len(),
+            msg.as_ptr(),
+            msg.len(),
+            sig.as_mut_ptr(),
+            sig.len(),
+        ),
+        TAFRAH_STATUS_OK
+    );
+    assert_eq!(
+        verify(
+            vk.as_ptr(),
+            vk.len(),
+            msg.as_ptr(),
+            msg.len(),
+            sig.as_ptr(),
+            sig.len(),
+        ),
+        TAFRAH_STATUS_OK
+    );
+    assert_eq!(
+        verify(
+            vk.as_ptr(),
+            vk.len(),
+            wrong_msg.as_ptr(),
+            wrong_msg.len(),
+            sig.as_ptr(),
+            sig.len(),
+        ),
+        TAFRAH_STATUS_VERIFICATION_FAILED
     );
 }
 
@@ -432,6 +487,18 @@ fn test_slh_dsa_abi_sign_verify_selected_families() {
         tafrah_slh_dsa_shake_128f_keygen,
         tafrah_slh_dsa_shake_128f_sign,
         tafrah_slh_dsa_shake_128f_verify,
+    );
+}
+
+#[test]
+fn test_slh_dsa_abi_hash_slh_sign_verify_selected_profile() {
+    run_slh_prehash_sign_verify(
+        tafrah_slh_dsa_shake_128f_vk_size(),
+        tafrah_slh_dsa_shake_128f_sk_size(),
+        tafrah_slh_dsa_shake_128f_sig_size(),
+        tafrah_slh_dsa_shake_128f_keygen,
+        tafrah_slh_dsa_shake_128f_hash_sha2_256_sign,
+        tafrah_slh_dsa_shake_128f_hash_sha2_256_verify,
     );
 }
 

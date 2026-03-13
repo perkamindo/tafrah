@@ -142,6 +142,10 @@ class TafrahABI:
         self._lib.tafrah_slh_dsa_shake_128f_sign.restype = ctypes.c_int
         self._lib.tafrah_slh_dsa_shake_128f_verify.argtypes = [u8p, size_t, u8p, size_t, u8p, size_t]
         self._lib.tafrah_slh_dsa_shake_128f_verify.restype = ctypes.c_int
+        self._lib.tafrah_slh_dsa_shake_128f_hash_sha2_256_sign.argtypes = [u8p, size_t, u8p, size_t, u8p, size_t]
+        self._lib.tafrah_slh_dsa_shake_128f_hash_sha2_256_sign.restype = ctypes.c_int
+        self._lib.tafrah_slh_dsa_shake_128f_hash_sha2_256_verify.argtypes = [u8p, size_t, u8p, size_t, u8p, size_t]
+        self._lib.tafrah_slh_dsa_shake_128f_hash_sha2_256_verify.restype = ctypes.c_int
 
         self._lib.tafrah_falcon_512_keygen.argtypes = [u8p, size_t, u8p, size_t]
         self._lib.tafrah_falcon_512_keygen.restype = ctypes.c_int
@@ -185,6 +189,17 @@ class TafrahABI:
             return False
         raise TafrahAbiError(f"native verify failed: {status} ({self.status_text(status)})")
 
+    def _expect_status(self, status: int, expected: int, op: str) -> bool:
+        if status == expected:
+            return True
+        raise TafrahAbiError(
+            f"{op}: expected {expected} ({self.status_text(expected)}), "
+            f"got {status} ({self.status_text(status)})"
+        )
+
+    def expect_status(self, status: int, expected: int, op: str) -> bool:
+        return self._expect_status(status, expected, op)
+
     def ml_kem_768_keygen(self) -> tuple[bytes, bytes]:
         ek = self._out_buffer(self.ml_kem_768_ek_size)
         dk = self._out_buffer(self.ml_kem_768_dk_size)
@@ -213,6 +228,14 @@ class TafrahABI:
         )
         return self._as_bytes(ss)
 
+    def ml_kem_768_decapsulate_status(self, dk: bytes, ct: bytes) -> int:
+        dk_in = self._ubyte_array(dk)
+        ct_in = self._ubyte_array(ct)
+        ss = self._out_buffer(self.shared_secret_size)
+        return self._lib.tafrah_ml_kem_768_decapsulate(
+            dk_in, len(dk), ct_in, len(ct), ss, len(ss)
+        )
+
     def ml_dsa_65_keygen(self) -> tuple[bytes, bytes]:
         vk = self._out_buffer(self.ml_dsa_65_vk_size)
         sk = self._out_buffer(self.ml_dsa_65_sk_size)
@@ -240,6 +263,14 @@ class TafrahABI:
             )
         )
 
+    def ml_dsa_65_verify_status(self, vk: bytes, message: bytes, sig: bytes) -> int:
+        vk_in = self._ubyte_array(vk)
+        msg_in = self._ubyte_array(message)
+        sig_in = self._ubyte_array(sig)
+        return self._lib.tafrah_ml_dsa_65_verify(
+            vk_in, len(vk), msg_in, len(message), sig_in, len(sig)
+        )
+
     def slh_dsa_shake_128f_keygen(self) -> tuple[bytes, bytes]:
         vk = self._out_buffer(self.slh_dsa_shake_128f_vk_size)
         sk = self._out_buffer(self.slh_dsa_shake_128f_sk_size)
@@ -265,6 +296,37 @@ class TafrahABI:
         sig_in = self._ubyte_array(sig)
         return self._verify_result(
             self._lib.tafrah_slh_dsa_shake_128f_verify(
+                vk_in, len(vk), msg_in, len(message), sig_in, len(sig)
+            )
+        )
+
+    def slh_dsa_shake_128f_verify_status(self, vk: bytes, message: bytes, sig: bytes) -> int:
+        vk_in = self._ubyte_array(vk)
+        msg_in = self._ubyte_array(message)
+        sig_in = self._ubyte_array(sig)
+        return self._lib.tafrah_slh_dsa_shake_128f_verify(
+            vk_in, len(vk), msg_in, len(message), sig_in, len(sig)
+        )
+
+    def slh_dsa_shake_128f_hash_sha2_256_sign(self, sk: bytes, message: bytes) -> bytes:
+        sk_in = self._ubyte_array(sk)
+        msg_in = self._ubyte_array(message)
+        sig = self._out_buffer(self.slh_dsa_shake_128f_sig_size)
+        self._check(
+            self._lib.tafrah_slh_dsa_shake_128f_hash_sha2_256_sign(
+                sk_in, len(sk), msg_in, len(message), sig, len(sig)
+            )
+        )
+        return self._as_bytes(sig)
+
+    def slh_dsa_shake_128f_hash_sha2_256_verify(
+        self, vk: bytes, message: bytes, sig: bytes
+    ) -> bool:
+        vk_in = self._ubyte_array(vk)
+        msg_in = self._ubyte_array(message)
+        sig_in = self._ubyte_array(sig)
+        return self._verify_result(
+            self._lib.tafrah_slh_dsa_shake_128f_hash_sha2_256_verify(
                 vk_in, len(vk), msg_in, len(message), sig_in, len(sig)
             )
         )
@@ -297,6 +359,14 @@ class TafrahABI:
         )
         return self._as_bytes(ss)
 
+    def hqc_128_decapsulate_status(self, dk: bytes, ct: bytes) -> int:
+        dk_in = self._ubyte_array(dk)
+        ct_in = self._ubyte_array(ct)
+        ss = self._out_buffer(self.hqc_128_ss_size)
+        return self._lib.tafrah_hqc_128_decapsulate(
+            dk_in, len(dk), ct_in, len(ct), ss, len(ss)
+        )
+
     def falcon_512_keygen(self) -> tuple[bytes, bytes]:
         vk = self._out_buffer(self.falcon_512_vk_size)
         sk = self._out_buffer(self.falcon_512_sk_size)
@@ -323,6 +393,14 @@ class TafrahABI:
             self._lib.tafrah_falcon_512_verify(
                 vk_in, len(vk), msg_in, len(message), sig_in, len(sig)
             )
+        )
+
+    def falcon_512_verify_status(self, vk: bytes, message: bytes, sig: bytes) -> int:
+        vk_in = self._ubyte_array(vk)
+        msg_in = self._ubyte_array(message)
+        sig_in = self._ubyte_array(sig)
+        return self._lib.tafrah_falcon_512_verify(
+            vk_in, len(vk), msg_in, len(message), sig_in, len(sig)
         )
 
 
