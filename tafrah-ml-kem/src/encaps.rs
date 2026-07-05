@@ -131,7 +131,7 @@ pub fn k_pke_encrypt(
 /// with explicit [`Params`] values.
 pub fn ml_kem_encaps(
     ek: &EncapsulationKey,
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<(Ciphertext, SharedSecret), Error> {
     params.validate()?;
@@ -144,7 +144,7 @@ pub fn ml_kem_encaps(
     let mut g_input = [0u8; 64];
     g_input[..32].copy_from_slice(&m);
     g_input[32..].copy_from_slice(&h_ek);
-    let g_output = Sha3_512::digest(&g_input);
+    let g_output = Sha3_512::digest(g_input);
 
     let mut shared_secret = [0u8; 32];
     shared_secret.copy_from_slice(&g_output[..32]);

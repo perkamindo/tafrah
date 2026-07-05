@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 
 use crate::fpr::{
     fpr_add, fpr_half, fpr_inv, fpr_mul, fpr_neg, fpr_of, fpr_sqr, fpr_sub, p2, Fpr, GmTable,
+    FPR_ZERO,
 };
 
 fn check_len(poly: &[Fpr], logn: usize) {
@@ -158,7 +159,7 @@ pub(crate) fn poly_mulselfadj_fft(a: &mut [Fpr], logn: usize) {
         let a_re = a[u];
         let a_im = a[u + hn];
         a[u] = fpr_add(fpr_sqr(a_re), fpr_sqr(a_im));
-        a[u + hn] = 0.0;
+        a[u + hn] = FPR_ZERO;
     }
 }
 
@@ -178,7 +179,7 @@ pub(crate) fn poly_invnorm2_fft(d: &mut [Fpr], a: &[Fpr], b: &[Fpr], logn: usize
         ));
     }
     for value in &mut d[hn..] {
-        *value = 0.0;
+        *value = FPR_ZERO;
     }
 }
 
@@ -293,7 +294,7 @@ mod tests {
     use alloc::vec;
 
     use super::{fft, ifft, poly_merge_fft, poly_split_fft, smallints_to_fpr};
-    use crate::fpr::GmTable;
+    use crate::fpr::{GmTable, FPR_ZERO};
 
     fn approx_eq(lhs: f64, rhs: f64) -> bool {
         (lhs - rhs).abs() <= 1e-9
@@ -310,7 +311,12 @@ mod tests {
         ifft(&mut poly, logn, &gm);
 
         for (got, want) in poly.iter().zip(original.iter()) {
-            assert!(approx_eq(*got, *want), "{got} != {want}");
+            assert!(
+                approx_eq(got.to_f64(), want.to_f64()),
+                "{} != {}",
+                got.to_f64(),
+                want.to_f64()
+            );
         }
     }
 
@@ -321,15 +327,20 @@ mod tests {
         let mut poly = smallints_to_fpr(&[2, -1, 3, 0, -4, 1, 5, -2], logn);
         fft(&mut poly, logn, &gm);
 
-        let mut left = vec![0.0; 1 << (logn - 1)];
-        let mut right = vec![0.0; 1 << (logn - 1)];
+        let mut left = vec![FPR_ZERO; 1 << (logn - 1)];
+        let mut right = vec![FPR_ZERO; 1 << (logn - 1)];
         poly_split_fft(&mut left, &mut right, &poly, logn, &gm);
 
-        let mut merged = vec![0.0; 1 << logn];
+        let mut merged = vec![FPR_ZERO; 1 << logn];
         poly_merge_fft(&mut merged, &left, &right, logn, &gm);
 
         for (got, want) in merged.iter().zip(poly.iter()) {
-            assert!(approx_eq(*got, *want), "{got} != {want}");
+            assert!(
+                approx_eq(got.to_f64(), want.to_f64()),
+                "{} != {}",
+                got.to_f64(),
+                want.to_f64()
+            );
         }
     }
 }

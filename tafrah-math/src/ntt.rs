@@ -48,7 +48,7 @@ pub mod kem {
                 for j in start..start + len {
                     let t = kem::fqmul(zeta as i16, r[j + len]);
                     r[j + len] = r[j] - t;
-                    r[j] = r[j] + t;
+                    r[j] += t;
                 }
                 start += 2 * len;
             }
@@ -59,6 +59,7 @@ pub mod kem {
     pub fn ntt(r: &mut [i16; N]) {
         #[cfg(all(feature = "neon", target_arch = "aarch64"))]
         if ntt_neon::kem::is_available() {
+            // SAFETY: reached only after the is_available() check above confirmed the required NEON target feature, the precondition of this intrinsic routine; r is a valid &mut [i16; N].
             unsafe {
                 ntt_neon::kem::ntt(r);
             }
@@ -66,6 +67,7 @@ pub mod kem {
         }
         #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
         if ntt_avx2::kem::is_available() {
+            // SAFETY: reached only after the is_available() check above confirmed the required AVX2 target feature, the precondition of this intrinsic routine; r is a valid &mut [i16; N].
             unsafe {
                 ntt_avx2::kem::ntt(r);
             }
@@ -87,7 +89,7 @@ pub mod kem {
                 for j in start..start + len {
                     let t = r[j];
                     r[j] = kem::barrett_reduce(t + r[j + len]);
-                    r[j + len] = r[j + len] - t;
+                    r[j + len] -= t;
                     r[j + len] = kem::fqmul(zeta as i16, r[j + len]);
                 }
                 start += 2 * len;
@@ -104,6 +106,7 @@ pub mod kem {
     pub fn inv_ntt(r: &mut [i16; N]) {
         #[cfg(all(feature = "neon", target_arch = "aarch64"))]
         if ntt_neon::kem::is_available() {
+            // SAFETY: reached only after the is_available() check above confirmed the required NEON target feature, the precondition of this intrinsic routine; r is a valid &mut [i16; N].
             unsafe {
                 ntt_neon::kem::inv_ntt(r);
             }
@@ -111,6 +114,7 @@ pub mod kem {
         }
         #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
         if ntt_avx2::kem::is_available() {
+            // SAFETY: reached only after the is_available() check above confirmed the required AVX2 target feature, the precondition of this intrinsic routine; r is a valid &mut [i16; N].
             unsafe {
                 ntt_avx2::kem::inv_ntt(r);
             }
@@ -147,6 +151,7 @@ pub mod kem {
     pub fn poly_basemul_montgomery(r: &mut [i16; N], a: &[i16; N], b: &[i16; N]) {
         #[cfg(all(feature = "neon", target_arch = "aarch64"))]
         if ntt_neon::kem::is_available() {
+            // SAFETY: reached only after the is_available() check above confirmed the required NEON target feature, the precondition of this intrinsic routine; r is a valid &mut [i16; N] and a, b are valid &[i16; N].
             unsafe {
                 ntt_neon::kem::poly_basemul_montgomery(r, a, b);
             }
@@ -154,6 +159,7 @@ pub mod kem {
         }
         #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
         if ntt_avx2::kem::is_available() {
+            // SAFETY: reached only after the is_available() check above confirmed the required AVX2 target feature, the precondition of this intrinsic routine; r is a valid &mut [i16; N] and a, b are valid &[i16; N].
             unsafe {
                 ntt_avx2::kem::poly_basemul_montgomery(r, a, b);
             }
@@ -273,6 +279,7 @@ pub mod kem {
             let mut scalar = [0i16; N];
             let mut avx2 = [0i16; N];
             poly_basemul_montgomery_scalar(&mut scalar, &a, &b);
+            // SAFETY: this branch is reached only after the is_available() guard above confirmed the AVX2 target feature, the precondition of this intrinsic routine; the arguments are valid fixed-size [i16; N] arrays.
             unsafe {
                 crate::ntt_avx2::kem::poly_basemul_montgomery(&mut avx2, &a, &b);
             }
@@ -291,6 +298,7 @@ pub mod kem {
             let mut scalar = [0i16; N];
             let mut neon = [0i16; N];
             poly_basemul_montgomery_scalar(&mut scalar, &a, &b);
+            // SAFETY: this test is cfg-gated to target_arch = "aarch64", where the NEON target feature (the precondition of this intrinsic routine) is architecturally guaranteed; the arguments are valid fixed-size [i16; N] arrays.
             unsafe {
                 crate::ntt_neon::kem::poly_basemul_montgomery(&mut neon, &a, &b);
             }
@@ -368,7 +376,7 @@ pub mod dsa {
                 for j in start..start + len {
                     let t = dsa::montgomery_reduce(zeta as i64 * a[j + len] as i64);
                     a[j + len] = a[j] - t;
-                    a[j] = a[j] + t;
+                    a[j] += t;
                 }
                 start += 2 * len;
             }
@@ -380,6 +388,7 @@ pub mod dsa {
         #[cfg(all(feature = "neon", target_arch = "aarch64"))]
         if ntt_neon::dsa::is_available() {
             // AArch64 guarantees Neon support.
+            // SAFETY: reached only after the is_available() check above confirmed the required NEON target feature, the precondition of this intrinsic routine; a is a valid &mut [i32; N].
             unsafe {
                 ntt_neon::dsa::ntt(a);
             }
@@ -388,6 +397,7 @@ pub mod dsa {
         #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
         if ntt_avx2::dsa::is_available() {
             // Runtime detection guarantees that the target feature is available.
+            // SAFETY: reached only after the is_available() check above confirmed the required AVX2 target feature, the precondition of this intrinsic routine; a is a valid &mut [i32; N].
             unsafe {
                 ntt_avx2::dsa::ntt(a);
             }
@@ -427,6 +437,7 @@ pub mod dsa {
         #[cfg(all(feature = "neon", target_arch = "aarch64"))]
         if ntt_neon::dsa::is_available() {
             // AArch64 guarantees Neon support.
+            // SAFETY: reached only after the is_available() check above confirmed the required NEON target feature, the precondition of this intrinsic routine; a is a valid &mut [i32; N].
             unsafe {
                 ntt_neon::dsa::inv_ntt(a);
             }
@@ -435,6 +446,7 @@ pub mod dsa {
         #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
         if ntt_avx2::dsa::is_available() {
             // Runtime detection guarantees that the target feature is available.
+            // SAFETY: reached only after the is_available() check above confirmed the required AVX2 target feature, the precondition of this intrinsic routine; a is a valid &mut [i32; N].
             unsafe {
                 ntt_avx2::dsa::inv_ntt(a);
             }
@@ -455,6 +467,7 @@ pub mod dsa {
         #[cfg(all(feature = "neon", target_arch = "aarch64"))]
         if ntt_neon::dsa::is_available() {
             // AArch64 guarantees Neon support.
+            // SAFETY: reached only after the is_available() check above confirmed the required NEON target feature, the precondition of this intrinsic routine; c is a valid &mut [i32; N] and a, b are valid &[i32; N].
             unsafe {
                 ntt_neon::dsa::pointwise_mul(c, a, b);
             }
@@ -463,6 +476,7 @@ pub mod dsa {
         #[cfg(all(feature = "avx2", any(target_arch = "x86", target_arch = "x86_64")))]
         if ntt_avx2::dsa::is_available() {
             // Runtime detection guarantees that the target feature is available.
+            // SAFETY: reached only after the is_available() check above confirmed the required AVX2 target feature, the precondition of this intrinsic routine; c is a valid &mut [i32; N] and a, b are valid &[i32; N].
             unsafe {
                 ntt_avx2::dsa::pointwise_mul(c, a, b);
             }
@@ -544,6 +558,7 @@ pub mod dsa {
             let mut scalar = [0i32; N];
             let mut avx2 = [0i32; N];
             pointwise_mul_scalar(&a, &b, &mut scalar);
+            // SAFETY: this branch is reached only after the is_available() guard above confirmed the AVX2 target feature, the precondition of this intrinsic routine; the arguments are valid fixed-size [i32; N] arrays.
             unsafe {
                 crate::ntt_avx2::dsa::pointwise_mul(&mut avx2, &a, &b);
             }
@@ -563,6 +578,7 @@ pub mod dsa {
             let mut scalar = [0i32; N];
             let mut neon = [0i32; N];
             pointwise_mul_scalar(&a, &b, &mut scalar);
+            // SAFETY: this test is cfg-gated to target_arch = "aarch64", where the NEON target feature (the precondition of this intrinsic routine) is architecturally guaranteed; the arguments are valid fixed-size [i32; N] arrays.
             unsafe {
                 crate::ntt_neon::dsa::pointwise_mul(&mut neon, &a, &b);
             }

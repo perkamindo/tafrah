@@ -30,10 +30,10 @@ fn parse_signing_key<'a>(
 }
 
 fn parse_digest_indices<'a>(digest: &'a [u8], params: &Params) -> (&'a [u8], u64, u32) {
-    let md_len = (params.k * params.a + 7) / 8;
+    let md_len = (params.k * params.a).div_ceil(8);
     let tree_bits = params.h - params.hp;
-    let tree_bytes = (tree_bits + 7) / 8;
-    let leaf_bytes = (params.hp + 7) / 8;
+    let tree_bytes = tree_bits.div_ceil(8);
+    let leaf_bytes = params.hp.div_ceil(8);
     let md = &digest[..md_len];
 
     let mut idx_tree: u64 = 0;
@@ -139,7 +139,7 @@ pub fn slh_sign(
 pub fn slh_dsa_sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<Signature, Error> {
     let mut opt_rand = alloc::vec![0u8; params.n];

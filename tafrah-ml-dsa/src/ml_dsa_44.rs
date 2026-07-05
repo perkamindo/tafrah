@@ -4,7 +4,7 @@ use tafrah_traits::Error;
 
 /// Generates an `ML-DSA-44` keypair.
 pub fn keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> (VerifyingKey, SigningKey) {
     crate::keygen::ml_dsa_keygen(rng, &ML_DSA_44)
         .expect("fixed ML-DSA-44 parameter set must be valid")
@@ -20,7 +20,7 @@ pub fn keygen_internal(seed: &[u8; 32]) -> (VerifyingKey, SigningKey) {
 pub fn sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Signature {
     crate::sign::ml_dsa_sign(sk, msg, rng, &ML_DSA_44)
         .expect("fixed ML-DSA-44 parameter set must be valid")
@@ -31,7 +31,7 @@ pub fn sign_with_context(
     sk: &SigningKey,
     msg: &[u8],
     ctx: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Result<Signature, Error> {
     crate::sign::ml_dsa_sign_with_context(sk, msg, ctx, rng, &ML_DSA_44)
 }
@@ -54,7 +54,7 @@ pub fn sign_deterministic_with_context(
 pub fn sign_extmu(
     sk: &SigningKey,
     mu: &[u8; 64],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Result<Signature, Error> {
     crate::sign::ml_dsa_sign_extmu(sk, mu, rng, &ML_DSA_44)
 }
@@ -69,7 +69,7 @@ pub fn sign_prehash_shake256(
     sk: &SigningKey,
     msg: &[u8],
     ctx: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Result<Signature, Error> {
     crate::sign::ml_dsa_sign_prehash_shake256(sk, msg, ctx, rng, &ML_DSA_44)
 }
@@ -87,7 +87,7 @@ pub fn sign_prehash_shake256_deterministic(
 pub fn sign_message(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Result<SignedMessage, Error> {
     crate::sign::ml_dsa_sign_message(sk, msg, rng, &ML_DSA_44)
 }
@@ -97,7 +97,7 @@ pub fn sign_message_with_context(
     sk: &SigningKey,
     msg: &[u8],
     ctx: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Result<SignedMessage, Error> {
     crate::sign::ml_dsa_sign_message_with_context(sk, msg, ctx, rng, &ML_DSA_44)
 }

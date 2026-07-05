@@ -7,6 +7,47 @@ use crate::fft::{fft, fft_retrieve_error_poly};
 use crate::gf::{gf_inverse, gf_mul};
 use crate::params::Params;
 
+// Constant-time helpers: all operands here are small (degrees/positions/counters
+// < 256). All arithmetic is wrapping because the dev profile enables
+// `overflow-checks`.
+
+/// Returns 0xFFFF if a != 0, else 0x0000.
+#[inline(always)]
+fn ct_neq_zero_mask(a: u16) -> u16 {
+    (((a | a.wrapping_neg()) >> 15) & 1).wrapping_neg()
+}
+
+/// Returns 0xFFFF if a == b, else 0x0000.
+#[inline(always)]
+fn ct_eq_mask(a: u16, b: u16) -> u16 {
+    !ct_neq_zero_mask(a ^ b)
+}
+
+/// Returns 0xFFFF if a > b (unsigned, inputs < 2^15), else 0x0000.
+#[inline(always)]
+fn ct_gt_mask(a: u16, b: u16) -> u16 {
+    let diff = (b as u32).wrapping_sub(a as u32); // bit 31 set iff a > b
+    (0u32.wrapping_sub(diff >> 31)) as u16
+}
+
+/// Returns 0xFFFF if a <= b, else 0x0000.
+#[inline(always)]
+fn ct_le_mask(a: u16, b: u16) -> u16 {
+    !ct_gt_mask(a, b)
+}
+
+/// Returns 0xFFFF if a < b, else 0x0000.
+#[inline(always)]
+fn ct_lt_mask(a: u16, b: u16) -> u16 {
+    ct_gt_mask(b, a)
+}
+
+/// Constant-time select: returns `a` if mask == 0xFFFF, `b` if mask == 0.
+#[inline(always)]
+fn select_u16(mask: u16, a: u16, b: u16) -> u16 {
+    (mask & a) | (!mask & b)
+}
+
 fn exp_at(index: usize) -> u16 {
     crate::gf::GF_EXP[index]
 }
@@ -16,7 +57,7 @@ fn compute_syndromes(codeword: &[u8], params: &Params) -> Vec<u16> {
 
     for (i, syndrome) in syndromes.iter_mut().enumerate() {
         for j in 1..params.n1 {
-            let power = (((i + 1) * j) % 255) as usize;
+            let power = ((i + 1) * j) % 255 ;
             *syndrome ^= gf_mul(u16::from(codeword[j]), exp_at(power));
         }
         *syndrome ^= u16::from(codeword[0]);
@@ -49,30 +90,22 @@ fn compute_elp(syndromes: &[u16], params: &Params) -> (Vec<u16>, usize) {
 
         let deg_x = (mu as u16).wrapping_sub(pp);
         let deg_x_sigma_p = deg_x as usize + deg_sigma_p;
-        let mask1 = if d != 0 { u16::MAX } else { 0 };
-        let mask2 = if deg_x_sigma_p > deg_sigma {
-            u16::MAX
-        } else {
-            0
-        };
+        let mask1 = ct_neq_zero_mask(d);
+        let mask2 = ct_gt_mask(deg_x_sigma_p as u16, deg_sigma as u16);
         let mask12 = mask1 & mask2;
-        if mask12 != 0 {
-            deg_sigma = deg_x_sigma_p;
-        }
+        deg_sigma = select_u16(mask12, deg_x_sigma_p as u16, deg_sigma as u16) as usize;
 
         if mu == 2 * params.delta - 1 {
             break;
         }
 
-        if mask12 != 0 {
-            pp = mu as u16;
-            d_p = d;
-            for i in (1..=params.delta).rev() {
-                x_sigma_p[i] = sigma_copy[i - 1];
-            }
-            x_sigma_p[0] = 0;
-            deg_sigma_p = deg_sigma_copy;
+        pp = select_u16(mask12, mu as u16, pp);
+        d_p = select_u16(mask12, d, d_p);
+        for i in (1..=params.delta).rev() {
+            x_sigma_p[i] = select_u16(mask12, sigma_copy[i - 1], x_sigma_p[i]);
         }
+        x_sigma_p[0] = select_u16(mask12, 0, x_sigma_p[0]);
+        deg_sigma_p = select_u16(mask12, deg_sigma_copy as u16, deg_sigma_p as u16) as usize;
 
         d = syndromes[mu + 1];
         for i in 1..=(mu + 1).min(params.delta) {
@@ -93,9 +126,7 @@ fn compute_z_poly(sigma: &[u16], degree: usize, syndromes: &[u16], params: &Para
     z[0] = 1;
 
     for i in 1..=params.delta {
-        if i <= degree {
-            z[i] = sigma[i];
-        }
+        z[i] = select_u16(ct_le_mask(i as u16, degree as u16), sigma[i], z[i]);
     }
 
     z[1] ^= syndromes[0];
@@ -113,17 +144,19 @@ fn compute_error_values(z: &[u16], error: &[u8], params: &Params) -> Vec<u16> {
     let mut beta_j = vec![0u16; params.delta];
     let mut e_j = vec![0u16; params.delta];
 
-    let mut delta_counter = 0usize;
-    for (index, &error_bit) in error.iter().take(params.n1).enumerate() {
-        if error_bit == 0 {
-            continue;
+    let mut delta_counter: u16 = 0;
+    for index in 0..params.n1 {
+        // valuemask = 0xFFFF at an error position, else 0 (error[] holds 0/1 flags).
+        let valuemask = ct_neq_zero_mask(u16::from(error[index]));
+        let val = exp_at(index); // PUBLIC index (loop position)
+        for j in 0..params.delta {
+            // Write beta_j[delta_counter] only, without revealing delta_counter.
+            let indexmask = ct_eq_mask(j as u16, delta_counter);
+            beta_j[j] ^= indexmask & valuemask & val;
         }
-        if delta_counter < params.delta {
-            beta_j[delta_counter] = exp_at(index);
-        }
-        delta_counter += 1;
+        delta_counter = delta_counter.wrapping_add(valuemask & 1);
     }
-    let delta_real_value = delta_counter.min(params.delta);
+    let delta_real_value = delta_counter.min(params.delta as u16) as usize;
 
     for i in 0..params.delta {
         let inverse = gf_inverse(beta_j[i]);
@@ -139,21 +172,23 @@ fn compute_error_values(z: &[u16], error: &[u8], params: &Params) -> Vec<u16> {
             tmp2 = gf_mul(tmp2, 1 ^ gf_mul(inverse, beta_j[(i + k) % params.delta]));
         }
 
-        if i < delta_real_value {
-            e_j[i] = gf_mul(tmp1, gf_inverse(tmp2));
-        }
+        // Compute unconditionally (gf_inverse(0)==0 makes unused slots harmless),
+        // then store only for i < delta_real_value via a constant-time mask.
+        let candidate = gf_mul(tmp1, gf_inverse(tmp2));
+        e_j[i] = select_u16(ct_lt_mask(i as u16, delta_real_value as u16), candidate, e_j[i]);
     }
 
     let mut error_values = vec![0u16; params.n1];
-    delta_counter = 0;
-    for (index, &error_bit) in error.iter().take(params.n1).enumerate() {
-        if error_bit == 0 {
-            continue;
+    let mut delta_counter: u16 = 0;
+    for index in 0..params.n1 {
+        let valuemask = ct_neq_zero_mask(u16::from(error[index]));
+        // Constant-time read of e_j[delta_counter] (0 when delta_counter >= delta).
+        let mut ev = 0u16;
+        for j in 0..params.delta {
+            ev ^= ct_eq_mask(j as u16, delta_counter) & e_j[j];
         }
-        if delta_counter < params.delta {
-            error_values[index] = e_j[delta_counter];
-        }
-        delta_counter += 1;
+        error_values[index] ^= valuemask & ev;
+        delta_counter = delta_counter.wrapping_add(valuemask & 1);
     }
 
     error_values
@@ -191,4 +226,28 @@ pub fn decode(codeword: &[u8], params: &Params) -> Vec<u8> {
     }
 
     corrected[params.g - 1..params.g - 1 + params.k].to_vec()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ct_mask_helpers_match_reference_exhaustively() {
+        for a in 0..256u16 {
+            assert_eq!(
+                ct_neq_zero_mask(a),
+                if a != 0 { 0xFFFF } else { 0 },
+                "ct_neq_zero_mask({a})"
+            );
+            for b in 0..256u16 {
+                assert_eq!(ct_eq_mask(a, b), if a == b { 0xFFFF } else { 0 }, "ct_eq_mask({a},{b})");
+                assert_eq!(ct_gt_mask(a, b), if a > b { 0xFFFF } else { 0 }, "ct_gt_mask({a},{b})");
+                assert_eq!(ct_le_mask(a, b), if a <= b { 0xFFFF } else { 0 }, "ct_le_mask({a},{b})");
+                assert_eq!(ct_lt_mask(a, b), if a < b { 0xFFFF } else { 0 }, "ct_lt_mask({a},{b})");
+                assert_eq!(select_u16(0xFFFF, a, b), a, "select_u16(all-ones)");
+                assert_eq!(select_u16(0, a, b), b, "select_u16(zero)");
+            }
+        }
+    }
 }

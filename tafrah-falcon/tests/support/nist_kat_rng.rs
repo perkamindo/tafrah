@@ -53,7 +53,7 @@ fn expand_key(key: &[u8; 32]) -> [u8; 240] {
 
     while bytes_generated < expanded.len() {
         temp.copy_from_slice(&expanded[bytes_generated - 4..bytes_generated]);
-        if bytes_generated % 32 == 0 {
+        if bytes_generated.is_multiple_of(32) {
             temp.rotate_left(1);
             temp = sub_word(temp);
             temp[0] ^= RCON[rcon_index];

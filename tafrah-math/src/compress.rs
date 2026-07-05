@@ -26,7 +26,7 @@ mod tests {
     #[test]
     fn test_compress_decompress_roundtrip() {
         for d in [1u32, 4, 5, 10, 11] {
-            for x in (0..Q as i16).step_by(100) {
+            for x in (0..Q).step_by(100) {
                 let compressed = compress(x, d);
                 let decompressed = decompress(compressed, d);
 
@@ -51,7 +51,7 @@ mod tests {
     fn test_compress_range() {
         for d in [1u32, 4, 10, 11] {
             let max_val = (1u16 << d) - 1;
-            for x in 0..Q as i16 {
+            for x in 0..Q {
                 let c = compress(x, d);
                 assert!(c <= max_val, "d={}, x={}, compressed={}", d, x, c);
             }

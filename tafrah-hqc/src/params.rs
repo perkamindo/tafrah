@@ -11,6 +11,13 @@ use tafrah_traits::Error;
 
 #[derive(Debug, Clone, Copy)]
 /// Validated HQC parameter bundle.
+///
+/// Marked `#[non_exhaustive]` so downstream crates cannot construct a bundle
+/// via a struct literal (or functional-update) and thereby bypass validation;
+/// the only supported bundles are the `HQC_*` consts below, each of which
+/// `validate()` accepts. `validate()` remains the enforcing guard at every
+/// operation entry point.
+#[non_exhaustive]
 pub struct Params {
     /// Claimed NIST security level.
     pub nist_level: usize,
@@ -55,7 +62,7 @@ pub struct Params {
 }
 
 const fn ceil_divide(a: usize, b: usize) -> usize {
-    (a / b) + if a % b == 0 { 0 } else { 1 }
+    (a / b) + if a.is_multiple_of(b) { 0 } else { 1 }
 }
 
 impl Params {

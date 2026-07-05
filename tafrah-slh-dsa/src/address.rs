@@ -175,8 +175,8 @@ impl Adrs {
 
     /// Copies the layer and tree subtree coordinates while preserving the current type layout.
     pub fn copy_subtree(&self) -> Adrs {
-        let new = self.clone();
+        
         // Keep layer, tree
-        new
+        self.clone()
     }
 }

@@ -44,6 +44,7 @@ pub(crate) mod kem {
 
     #[inline]
     fn detect_avx2() -> bool {
+        // SAFETY: __cpuid, __cpuid_count and _xgetbv are always available on the x86/x86_64 targets this module is cfg-gated to and carry no memory-safety preconditions. _xgetbv(0) reads XCR0, which is valid to query only once the XSAVE/OSXSAVE bits checked above confirm the OS enabled it; that ordering is enforced by the early returns.
         unsafe {
             let leaf1 = __cpuid(1);
             let has_xsave = (leaf1.ecx & (1 << 26)) != 0;
@@ -253,6 +254,7 @@ pub(crate) mod dsa {
 
     #[inline]
     fn detect_avx2() -> bool {
+        // SAFETY: __cpuid, __cpuid_count and _xgetbv are always available on the x86/x86_64 targets this module is cfg-gated to and carry no memory-safety preconditions. _xgetbv(0) reads XCR0, which is valid to query only once the XSAVE/OSXSAVE bits checked above confirm the OS enabled it; that ordering is enforced by the early returns.
         unsafe {
             let leaf1 = __cpuid(1);
             let has_xsave = (leaf1.ecx & (1 << 26)) != 0;
@@ -276,7 +278,9 @@ pub(crate) mod dsa {
     pub(crate) unsafe fn pointwise_mul(c: &mut [i32; N], a: &[i32; N], b: &[i32; N]) {
         let mut i = 0;
         while i < N {
+            // SAFETY: the enclosing fn carries #[target_feature(enable = "avx2")], so the avx2 feature is present (it is called only behind the is_available() gate in ntt.rs). _mm256_loadu_si256 is an unaligned 256-bit load; the loop maintains i + 8 <= N, so a[i..] spans at least 8 i32 (256 bits) within the fixed-size [i32; N] array.
             let lhs = unsafe { _mm256_loadu_si256(a[i..].as_ptr() as *const __m256i) };
+            // SAFETY: same target-feature guarantee; i + 8 <= N is maintained, so b[i..] spans at least 8 i32 (256 bits) within the fixed-size [i32; N] array for this unaligned 256-bit load.
             let rhs = unsafe { _mm256_loadu_si256(b[i..].as_ptr() as *const __m256i) };
             let lanes = mul_reduce_i32x8(lhs, rhs);
             c[i..i + 8].copy_from_slice(&lanes);
@@ -295,6 +299,7 @@ pub(crate) mod dsa {
                 let zeta = ZETAS[k];
                 let mut j = start;
                 while j + 8 <= start + len {
+                    // SAFETY: the enclosing fn carries #[target_feature(enable = "avx2")], so the avx2 feature is present (called only behind the is_available() gate in ntt.rs). The loop guard j + 8 <= start + len with start + 2*len <= N keeps a[j + len..] within bounds and at least 8 i32 (256 bits) wide for this unaligned 256-bit load.
                     let rhs =
                         unsafe { _mm256_loadu_si256(a[j + len..].as_ptr() as *const __m256i) };
                     let t = mul_const_reduce_i32x8(rhs, zeta);
@@ -335,6 +340,7 @@ pub(crate) mod dsa {
                         a[j + lane] = lhs + rhs;
                         diff[lane] = lhs - rhs;
                     }
+                    // SAFETY: the enclosing fn carries #[target_feature(enable = "avx2")], so the avx2 feature is present (called only behind the is_available() gate in ntt.rs). diff is a local [i32; 8], exactly 256 bits, so this unaligned 256-bit load stays in bounds.
                     let diff_vec = unsafe { _mm256_loadu_si256(diff.as_ptr() as *const __m256i) };
                     let reduced = mul_const_reduce_i32x8(diff_vec, zeta);
                     a[j + len..j + len + 8].copy_from_slice(&reduced);
@@ -375,6 +381,7 @@ pub(crate) mod dsa {
 
         let mut even = [0i64; 4];
         let mut odd = [0i64; 4];
+        // SAFETY: the enclosing fn carries #[target_feature(enable = "avx2")], so the avx2 feature is present (reached only behind the is_available() gate in ntt.rs). even and odd are local [i64; 4] buffers, exactly 256 bits each, so these unaligned 256-bit stores stay in bounds.
         unsafe {
             _mm256_storeu_si256(even.as_mut_ptr() as *mut __m256i, even_prod);
             _mm256_storeu_si256(odd.as_mut_ptr() as *mut __m256i, odd_prod);

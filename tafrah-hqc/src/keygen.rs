@@ -43,7 +43,7 @@ pub fn hqc_keygen_from_seeds(
 
 /// Generates an HQC keypair from fresh randomness.
 pub fn hqc_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<(EncapsulationKey, DecapsulationKey), Error> {
     params.validate()?;

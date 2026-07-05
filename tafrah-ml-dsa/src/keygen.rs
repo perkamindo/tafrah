@@ -167,7 +167,7 @@ fn ml_dsa_keygen_from_seed(
 /// This is the public FIPS 204 key generation entry point for callers that
 /// work with explicit [`Params`] values.
 pub fn ml_dsa_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<(VerifyingKey, SigningKey), Error> {
     let mut xi = [0u8; 32];

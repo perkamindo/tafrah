@@ -8,6 +8,13 @@
 //!
 //! Generic entry points live in `keygen`, `encaps`, and `decaps`.
 #![no_std]
+// Crypto crate: index-based loops mirror the reference implementations and aid
+// constant-time review; complex generic signatures are inherent to the APIs.
+#![allow(
+    clippy::needless_range_loop,
+    clippy::type_complexity,
+    clippy::too_many_arguments
+)]
 
 extern crate alloc;
 

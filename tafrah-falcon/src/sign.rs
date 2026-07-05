@@ -16,7 +16,7 @@ use crate::fft::{
 };
 use crate::fpr::{
     fpr_expm_p63, fpr_floor, fpr_half, fpr_mul, fpr_neg, fpr_of, fpr_rint, fpr_sqr, fpr_sub,
-    fpr_trunc, Fpr, GmTable, INVERSE_OF_Q, INV_2SQRSIGMA0, INV_LOG2, LOG2, SIGMA_MIN,
+    fpr_trunc, Fpr, GmTable, FPR_ZERO, INVERSE_OF_Q, INV_2SQRSIGMA0, INV_LOG2, LOG2, SIGMA_MIN,
 };
 use crate::key_material::decode_signing_key;
 use crate::params::Params;
@@ -173,7 +173,7 @@ fn do_sign_tree(
     gm: &GmTable,
 ) -> Option<Vec<i16>> {
     let n = 1usize << logn;
-    let mut tmp = vec![0.0; 6 * n];
+    let mut tmp = vec![FPR_ZERO; 6 * n];
     let (t0, rest) = tmp.split_at_mut(n);
     let (t1, rest) = rest.split_at_mut(n);
     let (tx, rest) = rest.split_at_mut(n);
@@ -237,7 +237,7 @@ fn do_sign_tree(
 pub fn falcon_sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<Signature, Error> {
     params.validate()?;

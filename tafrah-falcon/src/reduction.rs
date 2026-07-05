@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::fpr::{fpr_add, fpr_mul, Fpr};
+use crate::fpr::{fpr_add, fpr_mul, fpr_of, Fpr, FPR_ONE, FPR_ZERO};
 use crate::modp::{
     modp_intt2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_ntt2_ext, modp_r2, modp_rx,
     modp_set,
@@ -46,7 +46,7 @@ pub(crate) fn poly_big_to_fp(
     let n = 1usize << logn;
     debug_assert_eq!(d.len(), n);
     if flen == 0 {
-        d.fill(0.0);
+        d.fill(FPR_ZERO);
         return;
     }
 
@@ -54,14 +54,14 @@ pub(crate) fn poly_big_to_fp(
         let neg = 0u32.wrapping_sub(f[flen - 1] >> 30);
         let xm = neg >> 1;
         let mut cc = neg & 1;
-        let mut x = 0.0;
-        let mut fsc = 1.0;
+        let mut x = FPR_ZERO;
+        let mut fsc = FPR_ONE;
         for &word in &f[..flen] {
             let mut w = (word ^ xm).wrapping_add(cc);
             cc = w >> 31;
             w &= 0x7FFF_FFFF;
             w = w.wrapping_sub((w << 1) & neg);
-            x = fpr_add(x, fpr_mul(i32::from_ne_bytes(w.to_ne_bytes()) as Fpr, fsc));
+            x = fpr_add(x, fpr_mul(fpr_of(i64::from(i32::from_ne_bytes(w.to_ne_bytes()))), fsc));
             fsc = fpr_mul(fsc, PTWO31);
         }
         *slot = x;
@@ -178,6 +178,7 @@ mod tests {
     use rand::{RngExt, SeedableRng};
 
     use super::{poly_big_to_fp, poly_sub_scaled, poly_sub_scaled_ntt};
+    use crate::fpr::FPR_ZERO;
 
     fn encode_signed_i128(x: i128, len: usize) -> Vec<u32> {
         let bits = 31 * len;
@@ -224,10 +225,10 @@ mod tests {
             let enc = encode_signed_i128(coeff, flen);
             src[u * stride..u * stride + flen].copy_from_slice(&enc);
         }
-        let mut got = vec![0.0; coeffs.len()];
+        let mut got = vec![FPR_ZERO; coeffs.len()];
         poly_big_to_fp(&mut got, &src, flen, stride, 2);
         for (got, &want) in got.iter().zip(coeffs.iter()) {
-            assert_eq!(*got, want as f64);
+            assert_eq!(got.to_f64(), want as f64);
         }
     }
 

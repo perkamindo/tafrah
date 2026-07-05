@@ -89,6 +89,8 @@ impl From<Error> for UniFfiError {
             Error::DecodingError => Self::InternalError("decoding error".to_owned()),
             Error::RngError => Self::InternalError("rng error".to_owned()),
             Error::NotImplemented => Self::NotImplemented,
+            // `Error` is #[non_exhaustive]; map any future variant conservatively.
+            _ => Self::InternalError("internal error".to_owned()),
         }
     }
 }

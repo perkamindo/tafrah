@@ -44,11 +44,6 @@ impl VerifyingKey {
         &self.bytes
     }
 
-    /// Returns the serialized key bytes as a mutable slice.
-    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-        &mut self.bytes
-    }
-
     /// Consumes the carrier and returns the owned serialized bytes.
     pub fn into_bytes(mut self) -> Vec<u8> {
         core::mem::take(&mut self.bytes)
@@ -64,11 +59,6 @@ impl SigningKey {
     /// Returns the serialized key bytes.
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
-    }
-
-    /// Returns the serialized key bytes as a mutable slice.
-    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-        &mut self.bytes
     }
 
     /// Consumes the carrier and returns the owned serialized bytes.
@@ -88,11 +78,6 @@ impl Signature {
         &self.bytes
     }
 
-    /// Returns the serialized signature bytes as a mutable slice.
-    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-        &mut self.bytes
-    }
-
     /// Consumes the carrier and returns the owned serialized bytes.
     pub fn into_bytes(mut self) -> Vec<u8> {
         core::mem::take(&mut self.bytes)
@@ -108,11 +93,6 @@ impl SignedMessage {
     /// Returns the serialized signed-message bytes.
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
-    }
-
-    /// Returns the serialized signed-message bytes as a mutable slice.
-    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-        &mut self.bytes
     }
 
     /// Consumes the carrier and returns the owned serialized bytes.

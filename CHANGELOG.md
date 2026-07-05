@@ -4,6 +4,57 @@ All notable changes to Tafrah are documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-05
+
+Security-focused release that hardens the secret-dependent code paths across the
+library to run in constant time. Every fix was verified byte-exact against the
+reference Known-Answer Tests throughout (full workspace release regression:
+168 passed / 0 failed; clippy-clean workspace).
+
+### Security
+
+- HQC: reworked the secret-dependent code paths to be data-oblivious
+  (constant-time), including the fixed-weight sampler, the Reed-Muller
+  `find_peak`, the implicit-rejection select, GF(2^8) arithmetic, the
+  Reed-Solomon decoder, the cyclic polynomial multiply, and the vector reshape
+  (H-1..H-7). A secret-input data-flow trace confirmed every HQC secret-path
+  operation is now branchless and memory-oblivious.
+- Falcon: rewrote the floating-point layer from native `f64` to the reference
+  emulated integer IEEE-754 implementation (branchless), removing
+  floating-point-timing side channels. Confirmed via an assembly gate that the
+  release build emits zero floating-point instructions. The constant-time
+  property holds on x86-64, aarch64, and most ARM cores (data-independent
+  32x32->64 multiply and barrel shifts); it does not hold on cores with
+  variable-time multiply/shift such as Cortex-M0/M0+/M3 — see the `fpr.rs`
+  module comment. Falcon remains a non-default feature.
+- FFI: added a panic-catching boundary (`catch_unwind`) on every `extern "C"`
+  entry point so a Rust panic can no longer unwind across the C ABI.
+- Constant-time is claimed "by construction" (branchless source plus byte-exact
+  KAT parity); empirical `dudect`/`ctgrind` verification is not yet included.
+
+### Added
+
+- SAFETY documentation comments on every `unsafe` block across the ABI and math
+  SIMD layers.
+
+### Changed
+
+- **BREAKING:** removed the `as_mut_bytes` accessor from the carrier types;
+  in-place mutation of serialized key/ciphertext bytes is no longer exposed.
+- **BREAKING:** `Params` (all five parameter structs) and `Error` are now
+  `#[non_exhaustive]`, so downstream code can no longer construct them with a
+  struct literal or exhaustively match them; `validate()` remains the guard.
+- Synchronized all public workspace crate versions, ABI metadata, and
+  user-visible version strings to `0.2.0`.
+
+### Verification
+
+- `cargo test` passes for the full workspace release regression (168 / 0).
+- `cargo clippy --workspace` is clean (0 warnings).
+- Falcon differential tests validate every emulated `fpr_*` operation against
+  the native `f64` result, and a one-bit-flip liveness proof confirms the KAT
+  gate is non-vacuous.
+
 ## [0.1.8] - 2026-03-13
 
 ### Added

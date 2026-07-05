@@ -3,6 +3,12 @@ use tafrah_traits::Error;
 /// ML-DSA parameter sets (FIPS 204, Table 1)
 #[derive(Debug, Clone, Copy)]
 /// Validated ML-DSA parameter bundle.
+///
+/// Marked `#[non_exhaustive]` so downstream crates cannot construct a bundle
+/// via a struct literal (or functional-update) and thereby bypass validation;
+/// the only supported bundles are the `ML_DSA_*` consts below. `validate()`
+/// remains the enforcing guard at every operation entry point.
+#[non_exhaustive]
 pub struct Params {
     /// Number of rows in the public matrix.
     pub k: usize,

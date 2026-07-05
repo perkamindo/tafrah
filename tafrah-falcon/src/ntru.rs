@@ -7,7 +7,10 @@ use crate::fft::{
     fft, ifft, poly_add, poly_adj_fft, poly_invnorm2_fft, poly_mul_autoadj_fft, poly_mul_fft,
     poly_muladj_fft, poly_sub,
 };
-use crate::fpr::{fpr_lt, fpr_mul, fpr_rint, fpr_sqr, Fpr, GmTable};
+use crate::fpr::{
+    fpr_from_bits, fpr_inv, fpr_lt, fpr_mul, fpr_of, fpr_rint, fpr_sqr, Fpr, GmTable, FPR_ONE,
+    FPR_ONEHALF, FPR_TWO, FPR_ZERO,
+};
 use crate::modp::{
     modp_add, modp_intt2_ext, modp_mkgm2, modp_montymul, modp_ninv31, modp_norm, modp_ntt2_ext,
     modp_poly_rec_res, modp_r2, modp_rx, modp_set, modp_sub, SmallPrime,
@@ -1582,18 +1585,18 @@ pub(crate) struct IntermediateNtruSolution {
     pub(crate) word_len: usize,
 }
 
-const FPR_PTWO31M1: Fpr = 2_147_483_647.0;
-const FPR_MTWO31M1: Fpr = -2_147_483_647.0;
-const FPR_PTWO63M1: Fpr = 9_223_372_036_854_775_807.0;
-const FPR_MTWO63M1: Fpr = -9_223_372_036_854_775_807.0;
+const FPR_PTWO31M1: Fpr = fpr_from_bits(4_746_794_007_244_308_480);
+const FPR_MTWO31M1: Fpr = fpr_from_bits(13_970_166_044_099_084_288);
+const FPR_PTWO63M1: Fpr = fpr_from_bits(4_890_909_195_324_358_656);
+const FPR_MTWO63M1: Fpr = fpr_from_bits(14_114_281_232_179_134_464);
 
 fn scale_factor_pow2(mut dc: i32) -> Fpr {
-    let mut pt = 0.5;
+    let mut pt = FPR_ONEHALF;
     if dc < 0 {
         dc = -dc;
-        pt = 2.0;
+        pt = FPR_TWO;
     }
-    let mut pdc = 1.0;
+    let mut pdc = FPR_ONE;
     while dc != 0 {
         if (dc & 1) != 0 {
             pdc = fpr_mul(pdc, pt);
@@ -1624,9 +1627,9 @@ fn extract_top_words(
 fn poly_div_autoadj_fft(a: &mut [Fpr], b: &[Fpr], logn: usize) {
     let hn = (1usize << logn) >> 1;
     for u in 0..hn {
-        let inv = 1.0 / b[u];
-        a[u] *= inv;
-        a[u + hn] *= inv;
+        let inv = fpr_inv(b[u]);
+        a[u] = fpr_mul(a[u], inv);
+        a[u + hn] = fpr_mul(a[u + hn], inv);
     }
 }
 
@@ -1660,7 +1663,7 @@ fn make_fg_step(data: &[u32], logn: usize, depth: usize, in_ntt: bool, out_ntt: 
             modp_ntt2_ext(&mut t1, 1, &gm, logn, p, p0i);
         }
         for v in 0..hn {
-            let w0 = t1[(v << 1) + 0];
+            let w0 = t1[v << 1 ];
             let w1 = t1[(v << 1) + 1];
             fd[v * tlen + u] = modp_montymul(modp_montymul(w0, w1, p, p0i), r2, p, p0i);
         }
@@ -1675,7 +1678,7 @@ fn make_fg_step(data: &[u32], logn: usize, depth: usize, in_ntt: bool, out_ntt: 
             modp_ntt2_ext(&mut t1, 1, &gm, logn, p, p0i);
         }
         for v in 0..hn {
-            let w0 = t1[(v << 1) + 0];
+            let w0 = t1[v << 1 ];
             let w1 = t1[(v << 1) + 1];
             gd[v * tlen + u] = modp_montymul(modp_montymul(w0, w1, p, p0i), r2, p, p0i);
         }
@@ -1723,7 +1726,7 @@ fn make_fg_step(data: &[u32], logn: usize, depth: usize, in_ntt: bool, out_ntt: 
         }
         modp_ntt2_ext(&mut t1, 1, &gm, logn, p, p0i);
         for v in 0..hn {
-            let w0 = t1[(v << 1) + 0];
+            let w0 = t1[v << 1 ];
             let w1 = t1[(v << 1) + 1];
             fd[v * tlen + u] = modp_montymul(modp_montymul(w0, w1, p, p0i), r2, p, p0i);
         }
@@ -1734,7 +1737,7 @@ fn make_fg_step(data: &[u32], logn: usize, depth: usize, in_ntt: bool, out_ntt: 
         }
         modp_ntt2_ext(&mut t1, 1, &gm, logn, p, p0i);
         for v in 0..hn {
-            let w0 = t1[(v << 1) + 0];
+            let w0 = t1[v << 1 ];
             let w1 = t1[(v << 1) + 1];
             gd[v * tlen + u] = modp_montymul(modp_montymul(w0, w1, p, p0i), r2, p, p0i);
         }
@@ -1935,9 +1938,9 @@ pub(crate) fn solve_ntru_intermediate(
         modp_ntt2_ext(&mut gp, 1, &gm, logn - 1, p, p0i);
 
         for v in 0..hn {
-            let ft_a = fx[(v << 1) + 0];
+            let ft_a = fx[v << 1 ];
             let ft_b = fx[(v << 1) + 1];
-            let gt_a = gx[(v << 1) + 0];
+            let gt_a = gx[v << 1 ];
             let gt_b = gx[(v << 1) + 1];
             let mfp = modp_montymul(fp[v], r2, p, p0i);
             let mgp = modp_montymul(gp[v], r2, p, p0i);
@@ -1970,11 +1973,11 @@ pub(crate) fn solve_ntru_intermediate(
     );
 
     let gm_table = GmTable::new();
-    let mut rt1 = vec![0.0; n];
-    let mut rt2 = vec![0.0; n];
-    let mut rt3 = vec![0.0; n];
-    let mut rt4 = vec![0.0; n];
-    let mut rt5 = vec![0.0; n];
+    let mut rt1 = vec![FPR_ZERO; n];
+    let mut rt2 = vec![FPR_ZERO; n];
+    let mut rt3 = vec![FPR_ZERO; n];
+    let mut rt4 = vec![FPR_ZERO; n];
+    let mut rt5 = vec![FPR_ZERO; n];
     let mut k = vec![0i32; n];
     let mut ntt_tmp = vec![0u32; n * (slen + 4)];
 
@@ -2254,12 +2257,12 @@ pub(crate) fn solve_ntru_binary_depth1(
     gt.copy_from_slice(&fg_small[n * slen..]);
 
     let gm_table = GmTable::new();
-    let mut rt1 = vec![0.0; n];
-    let mut rt2 = vec![0.0; n];
-    let mut rt3 = vec![0.0; n];
-    let mut rt4 = vec![0.0; n];
-    let mut rt5 = vec![0.0; n];
-    let mut rt6 = vec![0.0; n];
+    let mut rt1 = vec![FPR_ZERO; n];
+    let mut rt2 = vec![FPR_ZERO; n];
+    let mut rt3 = vec![FPR_ZERO; n];
+    let mut rt4 = vec![FPR_ZERO; n];
+    let mut rt5 = vec![FPR_ZERO; n];
+    let mut rt6 = vec![FPR_ZERO; n];
 
     poly_big_to_fp(&mut rt1, &out_f, llen, llen, logn);
     poly_big_to_fp(&mut rt2, &out_g, llen, llen, logn);
@@ -2285,7 +2288,7 @@ pub(crate) fn solve_ntru_binary_depth1(
         if !fpr_lt(z, FPR_PTWO63M1) || !fpr_lt(FPR_MTWO63M1, z) {
             return None;
         }
-        *value = fpr_rint(z) as Fpr;
+        *value = fpr_of(fpr_rint(z));
     }
     fft(&mut rt5, logn, &gm_table);
 
@@ -2414,11 +2417,11 @@ pub(crate) fn solve_ntru_binary_depth0(
 
     modp_intt2_ext(&mut num, 1, &igm, logn, p, p0i);
     modp_intt2_ext(&mut den, 1, &igm, logn, p, p0i);
-    let mut rt_num = vec![0.0; n];
-    let mut rt_den = vec![0.0; n];
+    let mut rt_num = vec![FPR_ZERO; n];
+    let mut rt_den = vec![FPR_ZERO; n];
     for u in 0..n {
-        rt_num[u] = modp_norm(num[u], p) as Fpr;
-        rt_den[u] = modp_norm(den[u], p) as Fpr;
+        rt_num[u] = fpr_of(i64::from(modp_norm(num[u], p)));
+        rt_den[u] = fpr_of(i64::from(modp_norm(den[u], p)));
     }
 
     let gm_table = GmTable::new();
@@ -2599,9 +2602,9 @@ mod tests {
     fn ref_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
-            .nth(3)
-            .expect("workspace root")
-            .join("ref")
+            .map(|ancestor| ancestor.join("ref"))
+            .find(|candidate| candidate.is_dir())
+            .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("ref"))
     }
 
     fn ensure_reference_paths(label: &str, paths: &[PathBuf]) -> bool {

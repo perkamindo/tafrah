@@ -42,7 +42,7 @@ pub trait Encapsulate {
     /// Produces a ciphertext and shared secret.
     fn encapsulate(
         &self,
-        rng: &mut (impl CryptoRng + Rng),
+        rng: &mut impl CryptoRng,
     ) -> Result<(Self::Ciphertext, Self::SharedSecret), Self::Error>;
 }
 

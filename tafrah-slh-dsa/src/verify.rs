@@ -12,10 +12,10 @@ use crate::types::{Signature, VerifyingKey};
 use tafrah_traits::Error;
 
 fn parse_digest_indices<'a>(digest: &'a [u8], params: &Params) -> (&'a [u8], u64, u32) {
-    let md_len = (params.k * params.a + 7) / 8;
+    let md_len = (params.k * params.a).div_ceil(8);
     let tree_bits = params.h - params.hp;
-    let tree_bytes = (tree_bits + 7) / 8;
-    let leaf_bytes = (params.hp + 7) / 8;
+    let tree_bytes = tree_bits.div_ceil(8);
+    let leaf_bytes = params.hp.div_ceil(8);
     let md = &digest[..md_len];
 
     let mut idx_tree: u64 = 0;

@@ -22,7 +22,7 @@ fn words_from_bytes_le(bytes: &[u8], word_count: usize) -> Vec<u64> {
 }
 
 pub fn random_message_from_rng(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
     params: &Params,
 ) -> Vec<u64> {
     let mut message = vec![0u8; params.vec_k_size_bytes()];
@@ -31,7 +31,7 @@ pub fn random_message_from_rng(
 }
 
 pub fn random_salt_from_rng(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
     params: &Params,
 ) -> Vec<u8> {
     let mut salt = vec![0u8; params.salt_bytes];
@@ -157,10 +157,13 @@ pub fn decapsulate_ciphertext(
         &words_to_bytes_le(&v2, params.vec_n1n2_size_bytes()),
     ) | crate::arithmetic::vector_compare(&ciphertext.d, &d2);
 
-    if mismatch != 0 {
-        for byte in &mut ss.bytes {
-            *byte = 0;
-        }
+    // Branchless implicit rejection (FIPS-207 / HQC Round 4): on a ciphertext
+    // mismatch the shared secret is zeroed without a secret-dependent branch.
+    // `mismatch` is the OR of constant-time `vector_compare` results, so it is in
+    // {0, 1}; `wrapping_neg` maps 0 -> 0x00 (keep) and 1 -> 0xFF (zero).
+    let reject_mask = mismatch.wrapping_neg();
+    for byte in &mut ss.bytes {
+        *byte &= !reject_mask;
     }
 
     ss

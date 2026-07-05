@@ -7,7 +7,7 @@ use tafrah_math::poly::dsa::Poly;
 
 /// Pack polynomial with coefficients in [0, 2^bits - 1]
 pub fn pack_poly(poly: &Poly, bits: u32) -> Vec<u8> {
-    let num_bytes = (256 * bits as usize + 7) / 8;
+    let num_bytes = (256 * bits as usize).div_ceil(8);
     let mut bytes = vec![0u8; num_bytes];
     let mask = (1u64 << bits) - 1;
 
@@ -83,7 +83,7 @@ pub(crate) fn pack_eta(poly: &Poly, eta: usize) -> Vec<u8> {
             // Map [-2, 2] → [0, 4], pack 3 bits per coefficient
             let mut adjusted = Poly::zero();
             for i in 0..256 {
-                adjusted.coeffs[i] = (eta as i32 - poly.coeffs[i]) as i32;
+                adjusted.coeffs[i] = eta as i32 - poly.coeffs[i];
             }
             pack_poly(&adjusted, 3)
         }
@@ -91,7 +91,7 @@ pub(crate) fn pack_eta(poly: &Poly, eta: usize) -> Vec<u8> {
             // Map [-4, 4] → [0, 8], pack 4 bits per coefficient
             let mut adjusted = Poly::zero();
             for i in 0..256 {
-                adjusted.coeffs[i] = (eta as i32 - poly.coeffs[i]) as i32;
+                adjusted.coeffs[i] = eta as i32 - poly.coeffs[i];
             }
             pack_poly(&adjusted, 4)
         }

@@ -143,9 +143,9 @@ mod tests {
     fn ref_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
-            .nth(3)
-            .expect("workspace root")
-            .join("ref")
+            .map(|ancestor| ancestor.join("ref"))
+            .find(|candidate| candidate.is_dir())
+            .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("ref"))
     }
 
     fn ensure_reference_paths(label: &str, paths: &[PathBuf]) -> bool {

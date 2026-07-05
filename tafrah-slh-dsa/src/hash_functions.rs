@@ -49,7 +49,7 @@ pub fn prf(pk_seed: &[u8], sk_seed: &[u8], adrs: &Adrs, params: &Params) -> Vec<
             padded[..pk_seed.len()].copy_from_slice(pk_seed);
             let mut h = Sha256::new();
             sha2::Digest::update(&mut h, &padded);
-            sha2::Digest::update(&mut h, &adrs_bytes);
+            sha2::Digest::update(&mut h, adrs_bytes);
             sha2::Digest::update(&mut h, sk_seed);
             let result = h.finalize();
             result[..params.n].to_vec()
@@ -143,7 +143,7 @@ pub fn hash_t(pk_seed: &[u8], adrs: &Adrs, m: &[u8], params: &Params) -> Vec<u8>
                 padded[..pk_seed.len()].copy_from_slice(pk_seed);
                 let mut h = Sha512::new();
                 sha2::Digest::update(&mut h, &padded);
-                sha2::Digest::update(&mut h, &adrs_bytes);
+                sha2::Digest::update(&mut h, adrs_bytes);
                 sha2::Digest::update(&mut h, m);
                 let result = h.finalize();
                 result[..params.n].to_vec()
@@ -153,126 +153,12 @@ pub fn hash_t(pk_seed: &[u8], adrs: &Adrs, m: &[u8], params: &Params) -> Vec<u8>
                 padded[..pk_seed.len()].copy_from_slice(pk_seed);
                 let mut h = Sha256::new();
                 sha2::Digest::update(&mut h, &padded);
-                sha2::Digest::update(&mut h, &adrs_bytes);
+                sha2::Digest::update(&mut h, adrs_bytes);
                 sha2::Digest::update(&mut h, m);
                 let result = h.finalize();
                 result[..params.n].to_vec()
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{hash_f, hash_h, hash_t};
-    use crate::address::Adrs;
-    use crate::params::{SLH_DSA_SHA2_192S, SLH_DSA_SHA2_256S};
-    use alloc::vec;
-    use alloc::vec::Vec;
-    use sha2::{Digest, Sha256, Sha512};
-
-    fn expected_sha256_hash(pk_seed: &[u8], adrs: &Adrs, m: &[u8], n: usize) -> Vec<u8> {
-        let adrs_bytes = adrs.to_sha2_compressed_bytes();
-        let mut padded = vec![0u8; 64];
-        padded[..pk_seed.len()].copy_from_slice(pk_seed);
-        let mut h = Sha256::new();
-        sha2::Digest::update(&mut h, &padded);
-        sha2::Digest::update(&mut h, &adrs_bytes);
-        sha2::Digest::update(&mut h, m);
-        let result = h.finalize();
-        result[..n].to_vec()
-    }
-
-    fn expected_sha512_hash(pk_seed: &[u8], adrs: &Adrs, m: &[u8], n: usize) -> Vec<u8> {
-        let adrs_bytes = adrs.to_sha2_compressed_bytes();
-        let mut padded = vec![0u8; 128];
-        padded[..pk_seed.len()].copy_from_slice(pk_seed);
-        let mut h = Sha512::new();
-        sha2::Digest::update(&mut h, &padded);
-        sha2::Digest::update(&mut h, &adrs_bytes);
-        sha2::Digest::update(&mut h, m);
-        let result = h.finalize();
-        result[..n].to_vec()
-    }
-
-    #[test]
-    fn sha2_192_f_uses_sha256_for_single_block() {
-        let params = SLH_DSA_SHA2_192S;
-        let pk_seed = [0x11u8; 24];
-        let m = [0x22u8; 24];
-        let mut adrs = Adrs::new();
-        adrs.set_layer_address(3);
-        adrs.set_tree_address(0x0102_0304_0506_0708);
-        adrs.set_type_and_clear(crate::address::WOTS_HASH);
-        adrs.set_keypair_address(0x1234);
-        adrs.set_chain_address(9);
-        adrs.set_hash_address(17);
-
-        let actual = hash_f(&pk_seed, &adrs, &m, &params);
-        let expected = expected_sha256_hash(&pk_seed, &adrs, &m, params.n);
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn sha2_256_f_uses_sha256_for_single_block() {
-        let params = SLH_DSA_SHA2_256S;
-        let pk_seed = [0x33u8; 32];
-        let m = [0x44u8; 32];
-        let mut adrs = Adrs::new();
-        adrs.set_layer_address(4);
-        adrs.set_tree_address(0x1112_1314_1516_1718);
-        adrs.set_type_and_clear(crate::address::FORS_TREE);
-        adrs.set_keypair_address(0x5678);
-        adrs.set_tree_height(12);
-        adrs.set_tree_index(34);
-
-        let actual = hash_f(&pk_seed, &adrs, &m, &params);
-        let expected = expected_sha256_hash(&pk_seed, &adrs, &m, params.n);
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn sha2_192_h_and_t_use_sha512_for_multi_block_inputs() {
-        let params = SLH_DSA_SHA2_192S;
-        let pk_seed = [0x55u8; 24];
-        let mut adrs = Adrs::new();
-        adrs.set_layer_address(1);
-        adrs.set_tree_address(0x2223_2425_2627_2829);
-        adrs.set_type_and_clear(crate::address::TREE);
-        adrs.set_tree_height(3);
-        adrs.set_tree_index(7);
-
-        let mut two_blocks = vec![0x66u8; 2 * params.n];
-        let actual_h = hash_h(&pk_seed, &adrs, &two_blocks, &params);
-        let expected_h = expected_sha512_hash(&pk_seed, &adrs, &two_blocks, params.n);
-        assert_eq!(actual_h, expected_h);
-
-        two_blocks.extend_from_slice(&[0x77u8; 24]);
-        let actual_t = hash_t(&pk_seed, &adrs, &two_blocks, &params);
-        let expected_t = expected_sha512_hash(&pk_seed, &adrs, &two_blocks, params.n);
-        assert_eq!(actual_t, expected_t);
-    }
-
-    #[test]
-    fn sha2_256_h_and_t_use_sha512_for_multi_block_inputs() {
-        let params = SLH_DSA_SHA2_256S;
-        let pk_seed = [0x88u8; 32];
-        let mut adrs = Adrs::new();
-        adrs.set_layer_address(2);
-        adrs.set_tree_address(0x3132_3334_3536_3738);
-        adrs.set_type_and_clear(crate::address::FORS_ROOTS);
-        adrs.set_tree_height(5);
-        adrs.set_tree_index(11);
-
-        let mut two_blocks = vec![0x99u8; 2 * params.n];
-        let actual_h = hash_h(&pk_seed, &adrs, &two_blocks, &params);
-        let expected_h = expected_sha512_hash(&pk_seed, &adrs, &two_blocks, params.n);
-        assert_eq!(actual_h, expected_h);
-
-        two_blocks.extend_from_slice(&[0xAAu8; 32]);
-        let actual_t = hash_t(&pk_seed, &adrs, &two_blocks, &params);
-        let expected_t = expected_sha512_hash(&pk_seed, &adrs, &two_blocks, params.n);
-        assert_eq!(actual_t, expected_t);
     }
 }
 
@@ -376,7 +262,7 @@ fn mgf1_sha256(seed: &[u8], out_len: usize) -> Vec<u8> {
     while output.len() < out_len {
         let mut h = Sha256::new();
         sha2::Digest::update(&mut h, seed);
-        sha2::Digest::update(&mut h, &counter.to_be_bytes());
+        sha2::Digest::update(&mut h, counter.to_be_bytes());
         output.extend_from_slice(&h.finalize());
         counter += 1;
     }
@@ -392,10 +278,124 @@ fn mgf1_sha512(seed: &[u8], out_len: usize) -> Vec<u8> {
     while output.len() < out_len {
         let mut h = Sha512::new();
         sha2::Digest::update(&mut h, seed);
-        sha2::Digest::update(&mut h, &counter.to_be_bytes());
+        sha2::Digest::update(&mut h, counter.to_be_bytes());
         output.extend_from_slice(&h.finalize());
         counter += 1;
     }
     output.truncate(out_len);
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{hash_f, hash_h, hash_t};
+    use crate::address::Adrs;
+    use crate::params::{SLH_DSA_SHA2_192S, SLH_DSA_SHA2_256S};
+    use alloc::vec;
+    use alloc::vec::Vec;
+    use sha2::{Digest, Sha256, Sha512};
+
+    fn expected_sha256_hash(pk_seed: &[u8], adrs: &Adrs, m: &[u8], n: usize) -> Vec<u8> {
+        let adrs_bytes = adrs.to_sha2_compressed_bytes();
+        let mut padded = vec![0u8; 64];
+        padded[..pk_seed.len()].copy_from_slice(pk_seed);
+        let mut h = Sha256::new();
+        sha2::Digest::update(&mut h, &padded);
+        sha2::Digest::update(&mut h, adrs_bytes);
+        sha2::Digest::update(&mut h, m);
+        let result = h.finalize();
+        result[..n].to_vec()
+    }
+
+    fn expected_sha512_hash(pk_seed: &[u8], adrs: &Adrs, m: &[u8], n: usize) -> Vec<u8> {
+        let adrs_bytes = adrs.to_sha2_compressed_bytes();
+        let mut padded = vec![0u8; 128];
+        padded[..pk_seed.len()].copy_from_slice(pk_seed);
+        let mut h = Sha512::new();
+        sha2::Digest::update(&mut h, &padded);
+        sha2::Digest::update(&mut h, adrs_bytes);
+        sha2::Digest::update(&mut h, m);
+        let result = h.finalize();
+        result[..n].to_vec()
+    }
+
+    #[test]
+    fn sha2_192_f_uses_sha256_for_single_block() {
+        let params = SLH_DSA_SHA2_192S;
+        let pk_seed = [0x11u8; 24];
+        let m = [0x22u8; 24];
+        let mut adrs = Adrs::new();
+        adrs.set_layer_address(3);
+        adrs.set_tree_address(0x0102_0304_0506_0708);
+        adrs.set_type_and_clear(crate::address::WOTS_HASH);
+        adrs.set_keypair_address(0x1234);
+        adrs.set_chain_address(9);
+        adrs.set_hash_address(17);
+
+        let actual = hash_f(&pk_seed, &adrs, &m, &params);
+        let expected = expected_sha256_hash(&pk_seed, &adrs, &m, params.n);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn sha2_256_f_uses_sha256_for_single_block() {
+        let params = SLH_DSA_SHA2_256S;
+        let pk_seed = [0x33u8; 32];
+        let m = [0x44u8; 32];
+        let mut adrs = Adrs::new();
+        adrs.set_layer_address(4);
+        adrs.set_tree_address(0x1112_1314_1516_1718);
+        adrs.set_type_and_clear(crate::address::FORS_TREE);
+        adrs.set_keypair_address(0x5678);
+        adrs.set_tree_height(12);
+        adrs.set_tree_index(34);
+
+        let actual = hash_f(&pk_seed, &adrs, &m, &params);
+        let expected = expected_sha256_hash(&pk_seed, &adrs, &m, params.n);
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn sha2_192_h_and_t_use_sha512_for_multi_block_inputs() {
+        let params = SLH_DSA_SHA2_192S;
+        let pk_seed = [0x55u8; 24];
+        let mut adrs = Adrs::new();
+        adrs.set_layer_address(1);
+        adrs.set_tree_address(0x2223_2425_2627_2829);
+        adrs.set_type_and_clear(crate::address::TREE);
+        adrs.set_tree_height(3);
+        adrs.set_tree_index(7);
+
+        let mut two_blocks = vec![0x66u8; 2 * params.n];
+        let actual_h = hash_h(&pk_seed, &adrs, &two_blocks, &params);
+        let expected_h = expected_sha512_hash(&pk_seed, &adrs, &two_blocks, params.n);
+        assert_eq!(actual_h, expected_h);
+
+        two_blocks.extend_from_slice(&[0x77u8; 24]);
+        let actual_t = hash_t(&pk_seed, &adrs, &two_blocks, &params);
+        let expected_t = expected_sha512_hash(&pk_seed, &adrs, &two_blocks, params.n);
+        assert_eq!(actual_t, expected_t);
+    }
+
+    #[test]
+    fn sha2_256_h_and_t_use_sha512_for_multi_block_inputs() {
+        let params = SLH_DSA_SHA2_256S;
+        let pk_seed = [0x88u8; 32];
+        let mut adrs = Adrs::new();
+        adrs.set_layer_address(2);
+        adrs.set_tree_address(0x3132_3334_3536_3738);
+        adrs.set_type_and_clear(crate::address::FORS_ROOTS);
+        adrs.set_tree_height(5);
+        adrs.set_tree_index(11);
+
+        let mut two_blocks = vec![0x99u8; 2 * params.n];
+        let actual_h = hash_h(&pk_seed, &adrs, &two_blocks, &params);
+        let expected_h = expected_sha512_hash(&pk_seed, &adrs, &two_blocks, params.n);
+        assert_eq!(actual_h, expected_h);
+
+        two_blocks.extend_from_slice(&[0xAAu8; 32]);
+        let actual_t = hash_t(&pk_seed, &adrs, &two_blocks, &params);
+        let expected_t = expected_sha512_hash(&pk_seed, &adrs, &two_blocks, params.n);
+        assert_eq!(actual_t, expected_t);
+    }
 }

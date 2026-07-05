@@ -25,9 +25,9 @@ fn maybe_mldsa_native_root() -> Option<PathBuf> {
     let candidates = [
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
-            .nth(3)
-            .expect("workspace root")
-            .join("ref")
+            .map(|ancestor| ancestor.join("ref"))
+            .find(|candidate| candidate.is_dir())
+            .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("ref"))
             .join("mldsa-native"),
         PathBuf::from("/tmp/mldsa-native-audit"),
     ];

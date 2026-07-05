@@ -8,7 +8,7 @@ pub struct MlKem512Kem;
 
 /// Generates an `ML-KEM-512` keypair.
 pub fn keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> (EncapsulationKey, DecapsulationKey) {
     crate::keygen::ml_kem_keygen(rng, &ML_KEM_512)
         .expect("fixed ML-KEM-512 parameter set must be valid")
@@ -17,7 +17,7 @@ pub fn keygen(
 /// Encapsulates a shared secret for an `ML-KEM-512` public key.
 pub fn encapsulate(
     ek: &EncapsulationKey,
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Result<(Ciphertext, SharedSecret), Error> {
     crate::encaps::ml_kem_encaps(ek, rng, &ML_KEM_512)
 }

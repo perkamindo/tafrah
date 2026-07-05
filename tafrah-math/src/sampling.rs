@@ -170,12 +170,12 @@ pub mod dsa {
                 2 => {
                     if t0 < 15 {
                         // t0 mod 5 via: t0 - (205*t0 >> 10)*5
-                        let t0 = t0 - (205 * t0 >> 10) * 5;
+                        let t0 = t0 - ((205 * t0) >> 10) * 5;
                         poly.coeffs[ctr] = 2 - t0 as i32;
                         ctr += 1;
                     }
                     if t1 < 15 && ctr < 256 {
-                        let t1 = t1 - (205 * t1 >> 10) * 5;
+                        let t1 = t1 - ((205 * t1) >> 10) * 5;
                         poly.coeffs[ctr] = 2 - t1 as i32;
                         ctr += 1;
                     }

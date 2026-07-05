@@ -29,7 +29,7 @@ pub fn k_pke_keygen(d: &[u8; 32], params: &Params) -> Result<(Vec<u8>, Vec<u8>),
     g_input[..32].copy_from_slice(d);
     g_input[32] = k as u8;
 
-    let g_output = Sha3_512::digest(&g_input);
+    let g_output = Sha3_512::digest(g_input);
     // SHA3-512 always returns 64 bytes, so these fixed-size splits are exact.
     let rho: [u8; 32] = g_output[..32].try_into().unwrap();
     let sigma: [u8; 32] = g_output[32..64].try_into().unwrap();
@@ -105,7 +105,7 @@ pub fn k_pke_keygen(d: &[u8; 32], params: &Params) -> Result<(Vec<u8>, Vec<u8>),
 /// This is the public FIPS 203 Algorithm 16 entry point for callers that work
 /// with explicit [`Params`] values.
 pub fn ml_kem_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<(EncapsulationKey, DecapsulationKey), Error> {
     params.validate()?;

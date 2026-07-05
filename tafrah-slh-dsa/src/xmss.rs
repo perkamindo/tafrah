@@ -159,7 +159,7 @@ pub fn xmss_pk_from_sig(
             pair.extend_from_slice(&node);
             pair
         };
-        adrs.set_tree_index((idx >> (j + 1)) as u32);
+        adrs.set_tree_index(idx >> (j + 1));
         node = hash_functions::hash_h(pk_seed, adrs, &combined, params);
         combined.clear();
     }

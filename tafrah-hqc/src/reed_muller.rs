@@ -13,7 +13,7 @@ fn encode_byte(message: u8) -> [u32; 4] {
     let message = i32::from(message);
     let mut first_word = bit0mask(message >> 7);
 
-    first_word ^= bit0mask(message >> 0) & 0xaaaa_aaaa_u32 as i32;
+    first_word ^= bit0mask(message) & 0xaaaa_aaaa_u32 as i32;
     first_word ^= bit0mask(message >> 1) & 0xcccc_cccc_u32 as i32;
     first_word ^= bit0mask(message >> 2) & 0xf0f0_f0f0_u32 as i32;
     first_word ^= bit0mask(message >> 3) & 0xff00_ff00_u32 as i32;
@@ -61,16 +61,18 @@ fn find_peak(transform: &[i16; 128]) -> u8 {
     for (index, &value) in transform.iter().enumerate() {
         let value = i32::from(value);
         let absolute = value.abs();
-        if absolute > peak_abs_value {
-            peak_abs_value = absolute;
-            peak_value = value;
-            peak_pos = index as i32;
-        }
+        // Branchless argmax over |value| (strict `>`, first occurrence wins on ties),
+        // preserving the exact semantics of the original `if absolute > peak_abs_value`.
+        // mask = -1 iff absolute > peak_abs_value, else 0. Both operands are in
+        // 0..=32768, so the subtraction cannot overflow under `overflow-checks`.
+        let mask = (peak_abs_value - absolute) >> 31;
+        peak_abs_value ^= mask & (peak_abs_value ^ absolute);
+        peak_value ^= mask & (peak_value ^ value);
+        peak_pos ^= mask & (peak_pos ^ index as i32);
     }
 
-    if peak_value > 0 {
-        peak_pos |= 128;
-    }
+    // Branchless: set bit 7 iff peak_value > 0 (preserves the original strict test).
+    peak_pos |= (peak_value.wrapping_neg() >> 31) & 128;
 
     peak_pos as u8
 }

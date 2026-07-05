@@ -50,7 +50,7 @@ pub fn slh_keygen_internal(
 
 /// Generates an SLH-DSA verifying key and signing key pair.
 pub fn slh_dsa_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<(VerifyingKey, SigningKey), Error> {
     params.validate()?;

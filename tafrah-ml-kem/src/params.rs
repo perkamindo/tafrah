@@ -3,6 +3,12 @@ use tafrah_traits::Error;
 /// ML-KEM parameter sets (FIPS 203, Table 1)
 #[derive(Debug, Clone, Copy)]
 /// Validated ML-KEM parameter bundle.
+///
+/// Marked `#[non_exhaustive]` so downstream crates cannot construct a bundle
+/// via a struct literal (or functional-update) and thereby bypass validation;
+/// the only supported bundles are the `ML_KEM_*` consts below. `validate()`
+/// remains the enforcing guard at every operation entry point.
+#[non_exhaustive]
 pub struct Params {
     /// Rank parameter.
     pub k: usize,

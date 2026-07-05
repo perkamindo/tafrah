@@ -46,11 +46,6 @@ impl EncapsulationKey {
         &self.bytes
     }
 
-    /// Returns the serialized key bytes as a mutable slice.
-    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-        &mut self.bytes
-    }
-
     /// Consumes the carrier and returns the owned serialized bytes.
     pub fn into_bytes(mut self) -> Vec<u8> {
         core::mem::take(&mut self.bytes)
@@ -66,11 +61,6 @@ impl DecapsulationKey {
     /// Returns the serialized key bytes.
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
-    }
-
-    /// Returns the serialized key bytes as a mutable slice.
-    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-        &mut self.bytes
     }
 
     /// Consumes the carrier and returns the owned serialized bytes.
@@ -90,11 +80,6 @@ impl Ciphertext {
         &self.bytes
     }
 
-    /// Returns the serialized ciphertext bytes as a mutable slice.
-    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-        &mut self.bytes
-    }
-
     /// Consumes the carrier and returns the owned serialized bytes.
     pub fn into_bytes(mut self) -> Vec<u8> {
         core::mem::take(&mut self.bytes)
@@ -110,11 +95,6 @@ impl SharedSecret {
     /// Returns the shared-secret bytes.
     pub fn as_bytes(&self) -> &[u8] {
         &self.bytes
-    }
-
-    /// Returns the shared-secret bytes as a mutable slice.
-    pub fn as_mut_bytes(&mut self) -> &mut [u8] {
-        &mut self.bytes
     }
 
     /// Consumes the carrier and returns the owned shared-secret bytes.

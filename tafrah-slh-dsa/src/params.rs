@@ -11,6 +11,12 @@ pub enum HashType {
 
 #[derive(Debug, Clone, Copy)]
 /// Validated SLH-DSA parameter bundle.
+///
+/// Marked `#[non_exhaustive]` so downstream crates cannot construct a bundle
+/// via a struct literal (or functional-update) and thereby bypass validation;
+/// the only supported bundles are the `SLH_DSA_*` consts below. `validate()`
+/// remains the enforcing guard at every operation entry point.
+#[non_exhaustive]
 pub struct Params {
     pub n: usize,    // Security parameter (hash output length in bytes)
     pub h: usize,    // Total tree height
@@ -112,10 +118,10 @@ impl Params {
 
     /// Returns the number of bytes produced by `H_msg`.
     pub const fn message_digest_bytes(&self) -> usize {
-        let md_len = (self.k * self.a + 7) / 8;
+        let md_len = (self.k * self.a).div_ceil(8);
         let tree_bits = self.h - self.hp;
-        let tree_bytes = (tree_bits + 7) / 8;
-        let leaf_bytes = (self.hp + 7) / 8;
+        let tree_bytes = tree_bits.div_ceil(8);
+        let leaf_bytes = self.hp.div_ceil(8);
         md_len + tree_bytes + leaf_bytes
     }
 }

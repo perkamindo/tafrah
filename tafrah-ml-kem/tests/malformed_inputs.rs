@@ -2,7 +2,7 @@ use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;
 
 use tafrah_ml_kem::ml_kem_512;
-use tafrah_ml_kem::params::{Params, ML_KEM_512};
+use tafrah_ml_kem::params::ML_KEM_512;
 use tafrah_ml_kem::types::{Ciphertext, DecapsulationKey, EncapsulationKey};
 use tafrah_ml_kem::{encaps, keygen};
 use tafrah_traits::Error;
@@ -59,11 +59,11 @@ fn test_ml_kem_decapsulate_rejects_short_secret_key() {
 #[test]
 fn test_ml_kem_generic_api_rejects_invalid_params() {
     let mut rng = rand::rng();
-    let invalid = Params {
-        eta2: 3,
-        eta2_bytes: 192,
-        ..ML_KEM_512
-    };
+    // `Params` is `#[non_exhaustive]`, so build the malformed bundle by cloning a
+    // valid one and mutating fields (field writes stay legal; literal/`..` do not).
+    let mut invalid = ML_KEM_512;
+    invalid.eta2 = 3;
+    invalid.eta2_bytes = 192;
     let seed = [9u8; 32];
 
     assert!(matches!(

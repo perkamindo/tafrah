@@ -73,7 +73,7 @@ pub fn wots_sign(
 
     // Convert checksum to base w
     let csum_bytes = csum.to_be_bytes();
-    let csum_len = (params.len2 * params.lg_w + 7) / 8;
+    let csum_len = (params.len2 * params.lg_w).div_ceil(8);
     let csum_base_w = base_w(&csum_bytes[4 - csum_len..], params.lg_w, params.len2);
 
     let mut sig = Vec::with_capacity(params.len * params.n);
@@ -118,7 +118,7 @@ pub fn wots_pk_from_sig(
     }
     csum <<= (8 - ((params.len2 * params.lg_w) % 8)) % 8;
     let csum_bytes = csum.to_be_bytes();
-    let csum_len = (params.len2 * params.lg_w + 7) / 8;
+    let csum_len = (params.len2 * params.lg_w).div_ceil(8);
     let csum_base_w = base_w(&csum_bytes[4 - csum_len..], params.lg_w, params.len2);
 
     let mut wots_pk_adrs = adrs.clone();

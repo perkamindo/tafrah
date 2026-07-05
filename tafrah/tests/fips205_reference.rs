@@ -23,9 +23,9 @@ use tafrah_slh_dsa::verify::{slh_verify, slh_verify_internal};
 fn ref_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(3)
-        .expect("workspace root")
-        .join("ref")
+        .map(|ancestor| ancestor.join("ref"))
+        .find(|candidate| candidate.is_dir())
+        .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("ref"))
 }
 
 fn is_fips205_reference_checkout(path: &Path) -> bool {

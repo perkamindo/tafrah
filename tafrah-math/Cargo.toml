@@ -1,6 +1,6 @@
 [package]
 name = "tafrah-math"
-version = "0.1.8"
+version = "0.2.0"
 edition = "2021"
 description = "Math primitives for the Tafrah PQC library (NTT, polynomial ring, modular arithmetic)"
 authors.workspace = true

@@ -7,7 +7,7 @@ use crate::fft::{
     fft, poly_add, poly_ldlmv_fft, poly_muladj_fft, poly_mulselfadj_fft, poly_neg, poly_split_fft,
     smallints_to_fpr,
 };
-use crate::fpr::{fpr_mul, fpr_sqrt, Fpr, GmTable, INV_SIGMA};
+use crate::fpr::{fpr_mul, fpr_sqrt, Fpr, GmTable, FPR_ZERO, INV_SIGMA};
 use crate::key_material::DecodedSigningKey;
 
 fn ffldl_treesize(logn: usize) -> usize {
@@ -154,7 +154,7 @@ impl ExpandedSigningKey {
     pub(crate) fn from_decoded(decoded: &DecodedSigningKey, logn: usize) -> Self {
         let n = 1usize << logn;
         let total_len = skoff_tree(logn) + ffldl_treesize(logn);
-        let mut data = vec![0.0; total_len];
+        let mut data = vec![FPR_ZERO; total_len];
         let gm = GmTable::new();
 
         {
@@ -198,7 +198,7 @@ impl ExpandedSigningKey {
             poly_mulselfadj_fft(&mut gxx, logn);
             poly_add(&mut g11, &gxx);
 
-            let mut tmp = vec![0.0; n << 2];
+            let mut tmp = vec![FPR_ZERO; n << 2];
             ffldl_fft(tree, &g00, &g01, &g11, logn, &gm, &mut tmp);
             ffldl_binary_normalize(tree, logn, logn);
         }
@@ -243,7 +243,7 @@ mod tests {
     use std::vec::Vec;
 
     use crate::fft::ifft;
-    use crate::fpr::GmTable;
+    use crate::fpr::{Fpr, GmTable};
     use crate::key_material::decode_signing_key;
     use crate::params::{FALCON_1024, FALCON_512};
 
@@ -252,9 +252,9 @@ mod tests {
     fn ref_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
-            .nth(3)
-            .expect("workspace root")
-            .join("ref")
+            .map(|ancestor| ancestor.join("ref"))
+            .find(|candidate| candidate.is_dir())
+            .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("ref"))
     }
 
     fn ensure_reference_paths(label: &str, paths: &[PathBuf]) -> bool {
@@ -312,7 +312,7 @@ mod tests {
     }
 
     fn assert_basis_matches(
-        expanded_basis: &[f64],
+        expanded_basis: &[Fpr],
         expected: &[i8],
         negate: bool,
         gm: &GmTable,
@@ -326,7 +326,7 @@ mod tests {
             } else {
                 *want as f64
             };
-            assert!(approx_eq(*got, want), "{got} != {want}");
+            assert!(approx_eq(got.to_f64(), want), "{} != {}", got.to_f64(), want);
         }
     }
 

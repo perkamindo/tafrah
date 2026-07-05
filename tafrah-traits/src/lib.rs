@@ -17,6 +17,7 @@ pub mod serdes;
 use core::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Error {
     /// A serialized public or private key length is invalid.
     InvalidKeyLength,

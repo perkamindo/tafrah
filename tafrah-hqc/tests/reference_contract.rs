@@ -19,9 +19,9 @@ use tafrah_traits::Error;
 fn ref_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(3)
-        .expect("workspace root")
-        .join("ref")
+        .map(|ancestor| ancestor.join("ref"))
+        .find(|candidate| candidate.is_dir())
+        .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("ref"))
 }
 
 fn ensure_reference_paths(label: &str, paths: &[PathBuf]) -> bool {
@@ -475,6 +475,48 @@ fn test_hqc_decapsulates_reference_kat_entries() {
 }
 
 #[test]
+fn test_hqc_decaps_zeroizes_shared_secret_on_tampered_ciphertext() {
+    // FIPS-207 / HQC Round 4 implicit rejection: a ciphertext that fails the
+    // re-encryption check must yield an all-zero shared secret. The reference KAT
+    // vectors only exercise valid ciphertexts, so this guards the rejection path
+    // (and the constant-time mask that replaced the old data-dependent branch).
+    let path = ref_root()
+        .join("HQC-Round4-FIPS_207")
+        .join("KATs")
+        .join("Reference_Implementation")
+        .join("hqc-128")
+        .join("hqc-128_kat.rsp");
+    if !ensure_reference_paths("HQC tampered-ciphertext rejection", &[path.clone()]) {
+        return;
+    }
+
+    let entries = parse_rsp_entries(&path);
+    let entry = entries.first().expect("at least one HQC-128 KAT entry");
+    let sk = DecapsulationKey::from_bytes(hex_decode(field(entry, "sk")));
+    let ct_bytes = hex_decode(field(entry, "ct"));
+    let expected_ss = hex_decode(field(entry, "ss"));
+
+    // Sanity: the untampered ciphertext recovers the expected shared secret.
+    let ct = Ciphertext::from_bytes(ct_bytes.clone());
+    let ss = hqc_decaps(&sk, &ct, &HQC_128).expect("untampered decaps");
+    assert_eq!(
+        ss.as_bytes(),
+        expected_ss.as_slice(),
+        "untampered shared secret must match the KAT"
+    );
+
+    // Tamper one byte of the ciphertext: implicit rejection must zero the secret.
+    let mut tampered = ct_bytes;
+    tampered[0] ^= 0x01;
+    let ct_bad = Ciphertext::from_bytes(tampered);
+    let ss_bad = hqc_decaps(&sk, &ct_bad, &HQC_128).expect("tampered decaps");
+    assert!(
+        ss_bad.as_bytes().iter().all(|&b| b == 0),
+        "tampered ciphertext must yield an all-zero shared secret (implicit rejection)"
+    );
+}
+
+#[test]
 fn test_hqc_public_keygen_api_returns_well_formed_keys() {
     let mut rng = rand::rngs::StdRng::from_seed([7u8; 32]);
 
@@ -570,8 +612,9 @@ fn test_hqc_tampered_ciphertext_zeroes_shared_secret() {
     let (pk, sk) = tafrah_hqc::hqc_128::keygen(&mut rng).expect("keygen");
     let (ct, ss) = tafrah_hqc::hqc_128::encapsulate(&pk, &mut rng).expect("encaps");
 
-    let mut tampered = ct.clone();
-    tampered.as_mut_bytes()[0] ^= 0x01;
+    let mut tampered_bytes = ct.as_bytes().to_vec();
+    tampered_bytes[0] ^= 0x01;
+    let tampered = Ciphertext::from_bytes(tampered_bytes);
 
     let decapped = tafrah_hqc::hqc_128::decapsulate(&sk, &tampered).expect("decaps tampered");
     assert_ne!(

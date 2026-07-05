@@ -12,7 +12,7 @@ use crate::fft::{
     fft, ifft, poly_adj_fft, poly_invnorm2_fft, poly_mul_autoadj_fft, poly_mulconst,
     smallints_to_fpr,
 };
-use crate::fpr::{fpr_add, fpr_lt, fpr_sqr, Fpr, GmTable, BNORM_MAX, Q};
+use crate::fpr::{fpr_add, fpr_lt, fpr_sqr, Fpr, GmTable, BNORM_MAX, FPR_ZERO, Q};
 use crate::key_material::{encode_signing_key, encode_verifying_key};
 use crate::mq::compute_public_from_small;
 use crate::ntru::solve_ntru;
@@ -137,7 +137,7 @@ fn orthogonalized_norm_ok(f: &[i8], g: &[i8], logn: usize) -> bool {
     let gm = GmTable::new();
     let mut rt1 = smallints_to_fpr(f, logn);
     let mut rt2 = smallints_to_fpr(g, logn);
-    let mut rt3 = vec![0.0; n];
+    let mut rt3 = vec![FPR_ZERO; n];
 
     fft(&mut rt1, logn, &gm);
     fft(&mut rt2, logn, &gm);
@@ -151,7 +151,7 @@ fn orthogonalized_norm_ok(f: &[i8], g: &[i8], logn: usize) -> bool {
     ifft(&mut rt1, logn, &gm);
     ifft(&mut rt2, logn, &gm);
 
-    let mut bnorm: Fpr = 0.0;
+    let mut bnorm: Fpr = FPR_ZERO;
     for u in 0..n {
         bnorm = fpr_add(bnorm, fpr_sqr(rt1[u]));
         bnorm = fpr_add(bnorm, fpr_sqr(rt2[u]));
@@ -189,7 +189,7 @@ fn sample_pre_ntru_candidate_from_xof<R: XofReader>(
 
 #[cfg(test)]
 fn sample_pre_ntru_candidate(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut (impl rand_core::CryptoRng),
     params: &Params,
 ) -> Result<PreNtruCandidate, Error> {
     let mut seed = [0u8; 48];
@@ -202,31 +202,32 @@ fn sample_pre_ntru_candidate(
 
 /// Generates a Falcon verifying key and signing key pair.
 pub fn falcon_keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<(VerifyingKey, SigningKey), Error> {
     params.validate()?;
     let lim = (1i32 << (params.capital_fg_bits() - 1)) - 1;
     let mut seed = [0u8; 48];
 
+    // A single seed expands to an unbounded SHAKE256 XOF stream; the loop below
+    // resamples (f, g) candidates from that stream until NTRU solving succeeds,
+    // so no outer seed-regeneration loop is needed.
+    rng.fill_bytes(&mut seed);
+    let mut hasher = Shake256::default();
+    hasher.update(&seed);
+    let mut reader = hasher.finalize_xof();
+
     loop {
-        rng.fill_bytes(&mut seed);
-        let mut hasher = Shake256::default();
-        hasher.update(&seed);
-        let mut reader = hasher.finalize_xof();
+        let candidate = sample_pre_ntru_candidate_from_xof(&mut reader, params);
+        let Some((capital_f, _capital_g)) =
+            solve_ntru(params.log_n, &candidate.f, &candidate.g, lim)
+        else {
+            continue;
+        };
 
-        loop {
-            let candidate = sample_pre_ntru_candidate_from_xof(&mut reader, params);
-            let Some((capital_f, _capital_g)) =
-                solve_ntru(params.log_n, &candidate.f, &candidate.g, lim)
-            else {
-                continue;
-            };
-
-            let sk = encode_signing_key(&candidate.f, &candidate.g, &capital_f, params)?;
-            let vk = encode_verifying_key(&candidate.h, params)?;
-            return Ok((vk, sk));
-        }
+        let sk = encode_signing_key(&candidate.f, &candidate.g, &capital_f, params)?;
+        let vk = encode_verifying_key(&candidate.h, params)?;
+        return Ok((vk, sk));
     }
 }
 
@@ -303,9 +304,9 @@ mod tests {
     fn ref_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
-            .nth(3)
-            .expect("workspace root")
-            .join("ref")
+            .map(|ancestor| ancestor.join("ref"))
+            .find(|candidate| candidate.is_dir())
+            .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("ref"))
     }
 
     fn ensure_reference_paths(label: &str, paths: &[PathBuf]) -> bool {

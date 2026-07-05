@@ -12,6 +12,13 @@
 //! - scheme crates own RNG-backed key generation and randomized signing flows
 //! - host bindings and applications decide how randomness is sourced
 #![no_std]
+// Crypto crate: index-based loops mirror the reference implementations and aid
+// constant-time review; complex generic signatures are inherent to the APIs.
+#![allow(
+    clippy::needless_range_loop,
+    clippy::type_complexity,
+    clippy::too_many_arguments
+)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

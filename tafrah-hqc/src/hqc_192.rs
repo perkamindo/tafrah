@@ -8,7 +8,7 @@ pub struct Hqc192Kem;
 
 /// Generates an `HQC-192` keypair.
 pub fn keygen(
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Result<(EncapsulationKey, DecapsulationKey), Error> {
     crate::keygen::hqc_keygen(rng, &HQC_192)
 }
@@ -16,7 +16,7 @@ pub fn keygen(
 /// Encapsulates a shared secret for an `HQC-192` public key.
 pub fn encapsulate(
     ek: &EncapsulationKey,
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng ,
 ) -> Result<(Ciphertext, SharedSecret), Error> {
     crate::encaps::hqc_encaps(ek, rng, &HQC_192)
 }

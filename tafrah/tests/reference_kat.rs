@@ -21,9 +21,9 @@ use tafrah_slh_dsa::types::{Signature as SlhDsaSignature, VerifyingKey as SlhDsa
 fn ref_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(3)
-        .expect("workspace root")
-        .join("ref")
+        .map(|ancestor| ancestor.join("ref"))
+        .find(|candidate| candidate.is_dir())
+        .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("ref"))
 }
 
 fn ensure_reference_paths(label: &str, paths: &[PathBuf]) -> bool {
@@ -243,7 +243,7 @@ fn test_reference_ml_kem_decapsulation_kats() {
             let mut g_input = [0u8; 64];
             g_input[..32].copy_from_slice(&m_prime);
             g_input[32..].copy_from_slice(h_ek);
-            let g_output = Sha3_512::digest(&g_input);
+            let g_output = Sha3_512::digest(g_input);
             let k_prime = &g_output[..32];
             let r_prime: [u8; 32] = g_output[32..64].try_into().unwrap();
 
@@ -368,7 +368,7 @@ fn test_reference_ml_kem_final_oracle_parity() {
             let mut g_input = [0u8; 64];
             g_input[..32].copy_from_slice(&m);
             g_input[32..].copy_from_slice(&h_ek);
-            let g_output = Sha3_512::digest(&g_input);
+            let g_output = Sha3_512::digest(g_input);
             let r: [u8; 32] = g_output[32..64].try_into().unwrap();
             let ct_bytes = tafrah_ml_kem::encaps::k_pke_encrypt(&ek_pke, &m, &r, params)
                 .unwrap_or_else(|err| panic!("{variant} count={count}: encaps failed: {err}"));

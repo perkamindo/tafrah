@@ -218,7 +218,7 @@ pub(crate) fn modp_poly_rec_res(f: &mut [u32], logn: usize, p: u32, p0i: u32, r2
     let hn = 1usize << (logn - 1);
     debug_assert!(f.len() >= (hn << 1));
     for u in 0..hn {
-        let w0 = f[(u << 1) + 0];
+        let w0 = f[u << 1];
         let w1 = f[(u << 1) + 1];
         f[u] = modp_montymul(modp_montymul(w0, w1, p, p0i), r2, p, p0i);
     }

@@ -5,6 +5,12 @@ const MAX_CAPITAL_FG_BITS: [u8; 11] = [0, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8];
 
 #[derive(Debug, Clone, Copy)]
 /// Validated Falcon parameter bundle.
+///
+/// Marked `#[non_exhaustive]` so downstream crates cannot construct a bundle
+/// via a struct literal (or functional-update) and thereby bypass validation;
+/// the only supported bundles are the `FALCON_*` consts below. `validate()`
+/// remains the enforcing guard at every operation entry point.
+#[non_exhaustive]
 pub struct Params {
     /// Base-2 logarithm of the Falcon lattice dimension.
     pub log_n: usize,

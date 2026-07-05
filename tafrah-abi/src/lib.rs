@@ -3,6 +3,10 @@
 //! This crate is the universal host boundary for consumers that cannot link to
 //! the native Rust crates directly.
 
+// FFI boundary: the input/output `(ptr, len)` argument pairs make several inner
+// helpers exceed the argument-count lint; that shape is inherent to the C ABI.
+#![allow(clippy::too_many_arguments)]
+
 use core::ffi::{c_char, c_int};
 
 use rand::rngs::ThreadRng;
@@ -56,6 +60,17 @@ const STATUS_INTERNAL_ERROR: &[u8] = b"internal error\0";
 const STATUS_NOT_IMPLEMENTED: &[u8] = b"not implemented\0";
 const STATUS_UNKNOWN: &[u8] = b"unknown status\0";
 
+/// Runs an FFI operation, converting any panic into an internal-error status so
+/// a panic never unwinds across the `extern "C"` boundary. On Rust >= 1.81 such
+/// an unwind aborts the process; this guard instead returns an error code,
+/// keeping the host alive on malformed input (defense-in-depth).
+fn ffi_guard(operation: impl FnOnce() -> c_int) -> c_int {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(operation)) {
+        Ok(status) => status,
+        Err(_) => TAFRAH_STATUS_INTERNAL_ERROR,
+    }
+}
+
 fn status_from_error(err: Error) -> c_int {
     match err {
         Error::InvalidKeyLength
@@ -65,6 +80,8 @@ fn status_from_error(err: Error) -> c_int {
         Error::VerificationFailed => TAFRAH_STATUS_VERIFICATION_FAILED,
         Error::DecodingError | Error::RngError => TAFRAH_STATUS_INTERNAL_ERROR,
         Error::NotImplemented => TAFRAH_STATUS_NOT_IMPLEMENTED,
+        // `Error` is #[non_exhaustive]; map any future variant conservatively.
+        _ => TAFRAH_STATUS_INTERNAL_ERROR,
     }
 }
 
@@ -126,20 +143,24 @@ fn ml_kem_keygen_inner<F>(
 where
     F: FnOnce(&mut ThreadRng) -> (MlKemEncapsulationKey, MlKemDecapsulationKey),
 {
-    let ek_out = match unsafe { output_bytes_exact(ek_out, ek_len, params.ek_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let dk_out = match unsafe { output_bytes_exact(dk_out, dk_len, params.dk_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: ek_out/ek_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least ek_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ek_out = match unsafe { output_bytes_exact(ek_out, ek_len, params.ek_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: dk_out/dk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least dk_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let dk_out = match unsafe { output_bytes_exact(dk_out, dk_len, params.dk_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let mut rng = rand::rng();
-    let (ek, dk) = keygen(&mut rng);
-    ek_out.copy_from_slice(ek.as_bytes());
-    dk_out.copy_from_slice(dk.as_bytes());
-    TAFRAH_STATUS_OK
+        let mut rng = rand::rng();
+        let (ek, dk) = keygen(&mut rng);
+        ek_out.copy_from_slice(ek.as_bytes());
+        dk_out.copy_from_slice(dk.as_bytes());
+        TAFRAH_STATUS_OK
+    })
 }
 
 fn ml_kem_encapsulate_inner<F>(
@@ -158,29 +179,34 @@ where
         &mut ThreadRng,
     ) -> Result<(MlKemCiphertext, tafrah_ml_kem::types::SharedSecret), Error>,
 {
-    let ek_bytes = match unsafe { input_bytes_exact(ek_ptr, ek_len, params.ek_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let ct_out = match unsafe { output_bytes_exact(ct_out, ct_len, params.ct_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let ss_out = match unsafe { output_bytes_exact(ss_out, ss_len, 32) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: ek_ptr/ek_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least ek_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ek_bytes = match unsafe { input_bytes_exact(ek_ptr, ek_len, params.ek_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: ct_out/ct_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least ct_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ct_out = match unsafe { output_bytes_exact(ct_out, ct_len, params.ct_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: ss_out/ss_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least ss_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ss_out = match unsafe { output_bytes_exact(ss_out, ss_len, 32) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let ek = MlKemEncapsulationKey::from_bytes(ek_bytes.to_vec());
-    let mut rng = rand::rng();
-    match encapsulate(&ek, &mut rng) {
-        Ok((ct, ss)) => {
-            ct_out.copy_from_slice(ct.as_bytes());
-            ss_out.copy_from_slice(ss.as_bytes());
-            TAFRAH_STATUS_OK
+        let ek = MlKemEncapsulationKey::from_bytes(ek_bytes.to_vec());
+        let mut rng = rand::rng();
+        match encapsulate(&ek, &mut rng) {
+            Ok((ct, ss)) => {
+                ct_out.copy_from_slice(ct.as_bytes());
+                ss_out.copy_from_slice(ss.as_bytes());
+                TAFRAH_STATUS_OK
+            }
+            Err(err) => status_from_error(err),
         }
-        Err(err) => status_from_error(err),
-    }
+    })
 }
 
 fn ml_kem_decapsulate_inner<F>(
@@ -199,25 +225,30 @@ where
         &MlKemCiphertext,
     ) -> Result<tafrah_ml_kem::types::SharedSecret, Error>,
 {
-    let dk_bytes = match unsafe { input_bytes_exact(dk_ptr, dk_len, params.dk_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let ct_bytes = match unsafe { input_bytes_exact(ct_ptr, ct_len, params.ct_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let ss_out = match unsafe { output_bytes_exact(ss_out, ss_len, 32) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: dk_ptr/dk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least dk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let dk_bytes = match unsafe { input_bytes_exact(dk_ptr, dk_len, params.dk_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: ct_ptr/ct_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least ct_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ct_bytes = match unsafe { input_bytes_exact(ct_ptr, ct_len, params.ct_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: ss_out/ss_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least ss_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ss_out = match unsafe { output_bytes_exact(ss_out, ss_len, 32) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let dk = MlKemDecapsulationKey::from_bytes(dk_bytes.to_vec());
-    let ct = MlKemCiphertext::from_bytes(ct_bytes.to_vec());
-    match decapsulate(&dk, &ct) {
-        Ok(ss) => copy_result(ss.as_bytes(), ss_out),
-        Err(err) => status_from_error(err),
-    }
+        let dk = MlKemDecapsulationKey::from_bytes(dk_bytes.to_vec());
+        let ct = MlKemCiphertext::from_bytes(ct_bytes.to_vec());
+        match decapsulate(&dk, &ct) {
+            Ok(ss) => copy_result(ss.as_bytes(), ss_out),
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn ml_dsa_keygen_inner<F>(
@@ -231,20 +262,24 @@ fn ml_dsa_keygen_inner<F>(
 where
     F: FnOnce(&mut ThreadRng) -> (MlDsaVerifyingKey, MlDsaSigningKey),
 {
-    let vk_out = match unsafe { output_bytes_exact(vk_out, vk_len, params.vk_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sk_out = match unsafe { output_bytes_exact(sk_out, sk_len, params.sk_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: vk_out/vk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least vk_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let vk_out = match unsafe { output_bytes_exact(vk_out, vk_len, params.vk_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sk_out/sk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least sk_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sk_out = match unsafe { output_bytes_exact(sk_out, sk_len, params.sk_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let mut rng = rand::rng();
-    let (vk, sk) = keygen(&mut rng);
-    vk_out.copy_from_slice(vk.as_bytes());
-    sk_out.copy_from_slice(sk.as_bytes());
-    TAFRAH_STATUS_OK
+        let mut rng = rand::rng();
+        let (vk, sk) = keygen(&mut rng);
+        vk_out.copy_from_slice(vk.as_bytes());
+        sk_out.copy_from_slice(sk.as_bytes());
+        TAFRAH_STATUS_OK
+    })
 }
 
 fn ml_dsa_sign_inner<F>(
@@ -260,25 +295,30 @@ fn ml_dsa_sign_inner<F>(
 where
     F: FnOnce(&MlDsaSigningKey, &[u8], &mut ThreadRng) -> Result<MlDsaSignature, Error>,
 {
-    let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sig_out = match unsafe { output_bytes_exact(sig_out, sig_len, params.sig_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: sk_ptr/sk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least sk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: msg_ptr/msg_len come from the FFI caller; per the documented C ABI the pointer is null (only when msg_len is 0) or points to a readable buffer of at least msg_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sig_out/sig_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least sig_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sig_out = match unsafe { output_bytes_exact(sig_out, sig_len, params.sig_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let sk = MlDsaSigningKey::from_bytes(sk_bytes.to_vec());
-    let mut rng = rand::rng();
-    match sign(&sk, msg_bytes, &mut rng) {
-        Ok(sig) => copy_result(sig.as_bytes(), sig_out),
-        Err(err) => status_from_error(err),
-    }
+        let sk = MlDsaSigningKey::from_bytes(sk_bytes.to_vec());
+        let mut rng = rand::rng();
+        match sign(&sk, msg_bytes, &mut rng) {
+            Ok(sig) => copy_result(sig.as_bytes(), sig_out),
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn ml_dsa_verify_inner<F>(
@@ -294,25 +334,30 @@ fn ml_dsa_verify_inner<F>(
 where
     F: FnOnce(&MlDsaVerifyingKey, &[u8], &MlDsaSignature) -> Result<(), Error>,
 {
-    let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.vk_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sig_bytes = match unsafe { input_bytes_exact(sig_ptr, sig_len, params.sig_size()) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: vk_ptr/vk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least vk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.vk_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: msg_ptr/msg_len come from the FFI caller; per the documented C ABI the pointer is null (only when msg_len is 0) or points to a readable buffer of at least msg_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sig_ptr/sig_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least sig_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sig_bytes = match unsafe { input_bytes_exact(sig_ptr, sig_len, params.sig_size()) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let vk = MlDsaVerifyingKey::from_bytes(vk_bytes.to_vec());
-    let sig = MlDsaSignature::from_bytes(sig_bytes.to_vec());
-    match verify(&vk, msg_bytes, &sig) {
-        Ok(()) => TAFRAH_STATUS_OK,
-        Err(err) => status_from_error(err),
-    }
+        let vk = MlDsaVerifyingKey::from_bytes(vk_bytes.to_vec());
+        let sig = MlDsaSignature::from_bytes(sig_bytes.to_vec());
+        match verify(&vk, msg_bytes, &sig) {
+            Ok(()) => TAFRAH_STATUS_OK,
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn slh_dsa_keygen_inner<F>(
@@ -326,24 +371,28 @@ fn slh_dsa_keygen_inner<F>(
 where
     F: FnOnce(&mut ThreadRng) -> Result<(SlhDsaVerifyingKey, SlhDsaSigningKey), Error>,
 {
-    let vk_out = match unsafe { output_bytes_exact(vk_out, vk_len, params.pk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sk_out = match unsafe { output_bytes_exact(sk_out, sk_len, params.sk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: vk_out/vk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least vk_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let vk_out = match unsafe { output_bytes_exact(vk_out, vk_len, params.pk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sk_out/sk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least sk_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sk_out = match unsafe { output_bytes_exact(sk_out, sk_len, params.sk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let mut rng = rand::rng();
-    match keygen(&mut rng) {
-        Ok((vk, sk)) => {
-            vk_out.copy_from_slice(vk.as_bytes());
-            sk_out.copy_from_slice(sk.as_bytes());
-            TAFRAH_STATUS_OK
+        let mut rng = rand::rng();
+        match keygen(&mut rng) {
+            Ok((vk, sk)) => {
+                vk_out.copy_from_slice(vk.as_bytes());
+                sk_out.copy_from_slice(sk.as_bytes());
+                TAFRAH_STATUS_OK
+            }
+            Err(err) => status_from_error(err),
         }
-        Err(err) => status_from_error(err),
-    }
+    })
 }
 
 fn slh_dsa_sign_inner<F>(
@@ -359,25 +408,30 @@ fn slh_dsa_sign_inner<F>(
 where
     F: FnOnce(&SlhDsaSigningKey, &[u8], &mut ThreadRng) -> Result<SlhDsaSignature, Error>,
 {
-    let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sig_out = match unsafe { output_bytes_exact(sig_out, sig_len, params.sig_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: sk_ptr/sk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least sk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: msg_ptr/msg_len come from the FFI caller; per the documented C ABI the pointer is null (only when msg_len is 0) or points to a readable buffer of at least msg_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sig_out/sig_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least sig_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sig_out = match unsafe { output_bytes_exact(sig_out, sig_len, params.sig_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let sk = SlhDsaSigningKey::from_bytes(sk_bytes.to_vec());
-    let mut rng = rand::rng();
-    match sign(&sk, msg_bytes, &mut rng) {
-        Ok(sig) => copy_result(sig.as_bytes(), sig_out),
-        Err(err) => status_from_error(err),
-    }
+        let sk = SlhDsaSigningKey::from_bytes(sk_bytes.to_vec());
+        let mut rng = rand::rng();
+        match sign(&sk, msg_bytes, &mut rng) {
+            Ok(sig) => copy_result(sig.as_bytes(), sig_out),
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn slh_dsa_verify_inner<F>(
@@ -393,25 +447,30 @@ fn slh_dsa_verify_inner<F>(
 where
     F: FnOnce(&SlhDsaVerifyingKey, &[u8], &SlhDsaSignature) -> Result<(), Error>,
 {
-    let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.pk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sig_bytes = match unsafe { input_bytes_exact(sig_ptr, sig_len, params.sig_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: vk_ptr/vk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least vk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.pk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: msg_ptr/msg_len come from the FFI caller; per the documented C ABI the pointer is null (only when msg_len is 0) or points to a readable buffer of at least msg_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sig_ptr/sig_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least sig_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sig_bytes = match unsafe { input_bytes_exact(sig_ptr, sig_len, params.sig_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let vk = SlhDsaVerifyingKey::from_bytes(vk_bytes.to_vec());
-    let sig = SlhDsaSignature::from_bytes(sig_bytes.to_vec());
-    match verify(&vk, msg_bytes, &sig) {
-        Ok(()) => TAFRAH_STATUS_OK,
-        Err(err) => status_from_error(err),
-    }
+        let vk = SlhDsaVerifyingKey::from_bytes(vk_bytes.to_vec());
+        let sig = SlhDsaSignature::from_bytes(sig_bytes.to_vec());
+        match verify(&vk, msg_bytes, &sig) {
+            Ok(()) => TAFRAH_STATUS_OK,
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn slh_dsa_prehash_sign_inner(
@@ -424,26 +483,31 @@ fn slh_dsa_prehash_sign_inner(
     params: &SlhDsaParams,
     ph: PrehashAlgorithm,
 ) -> c_int {
-    let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sig_out = match unsafe { output_bytes_exact(sig_out, sig_len, params.sig_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: sk_ptr/sk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least sk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: msg_ptr/msg_len come from the FFI caller; per the documented C ABI the pointer is null (only when msg_len is 0) or points to a readable buffer of at least msg_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sig_out/sig_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least sig_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sig_out = match unsafe { output_bytes_exact(sig_out, sig_len, params.sig_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let sk = SlhDsaSigningKey::from_bytes(sk_bytes.to_vec());
-    let mut opt_rand = vec![0u8; params.n];
-    rand::fill(&mut opt_rand[..]);
-    match hash_slh_sign(&sk, msg_bytes, &[], ph, Some(&opt_rand), params) {
-        Ok(sig) => copy_result(sig.as_bytes(), sig_out),
-        Err(err) => status_from_error(err),
-    }
+        let sk = SlhDsaSigningKey::from_bytes(sk_bytes.to_vec());
+        let mut opt_rand = vec![0u8; params.n];
+        rand::fill(&mut opt_rand[..]);
+        match hash_slh_sign(&sk, msg_bytes, &[], ph, Some(&opt_rand), params) {
+            Ok(sig) => copy_result(sig.as_bytes(), sig_out),
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn slh_dsa_prehash_verify_inner(
@@ -456,25 +520,30 @@ fn slh_dsa_prehash_verify_inner(
     params: &SlhDsaParams,
     ph: PrehashAlgorithm,
 ) -> c_int {
-    let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.pk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sig_bytes = match unsafe { input_bytes_exact(sig_ptr, sig_len, params.sig_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: vk_ptr/vk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least vk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.pk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: msg_ptr/msg_len come from the FFI caller; per the documented C ABI the pointer is null (only when msg_len is 0) or points to a readable buffer of at least msg_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sig_ptr/sig_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least sig_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sig_bytes = match unsafe { input_bytes_exact(sig_ptr, sig_len, params.sig_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let vk = SlhDsaVerifyingKey::from_bytes(vk_bytes.to_vec());
-    let sig = SlhDsaSignature::from_bytes(sig_bytes.to_vec());
-    match hash_slh_verify(&vk, msg_bytes, &sig, &[], ph, params) {
-        Ok(()) => TAFRAH_STATUS_OK,
-        Err(err) => status_from_error(err),
-    }
+        let vk = SlhDsaVerifyingKey::from_bytes(vk_bytes.to_vec());
+        let sig = SlhDsaSignature::from_bytes(sig_bytes.to_vec());
+        match hash_slh_verify(&vk, msg_bytes, &sig, &[], ph, params) {
+            Ok(()) => TAFRAH_STATUS_OK,
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn falcon_keygen_inner<F>(
@@ -488,24 +557,28 @@ fn falcon_keygen_inner<F>(
 where
     F: FnOnce(&mut ThreadRng) -> Result<(FalconVerifyingKey, FalconSigningKey), Error>,
 {
-    let vk_out = match unsafe { output_bytes_exact(vk_out, vk_len, params.pk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let sk_out = match unsafe { output_bytes_exact(sk_out, sk_len, params.sk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: vk_out/vk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least vk_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let vk_out = match unsafe { output_bytes_exact(vk_out, vk_len, params.pk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: sk_out/sk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least sk_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sk_out = match unsafe { output_bytes_exact(sk_out, sk_len, params.sk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let mut rng = rand::rng();
-    match keygen(&mut rng) {
-        Ok((vk, sk)) => {
-            vk_out.copy_from_slice(vk.as_bytes());
-            sk_out.copy_from_slice(sk.as_bytes());
-            TAFRAH_STATUS_OK
+        let mut rng = rand::rng();
+        match keygen(&mut rng) {
+            Ok((vk, sk)) => {
+                vk_out.copy_from_slice(vk.as_bytes());
+                sk_out.copy_from_slice(sk.as_bytes());
+                TAFRAH_STATUS_OK
+            }
+            Err(err) => status_from_error(err),
         }
-        Err(err) => status_from_error(err),
-    }
+    })
 }
 
 fn falcon_sign_inner<F>(
@@ -522,38 +595,44 @@ fn falcon_sign_inner<F>(
 where
     F: FnOnce(&FalconSigningKey, &[u8], &mut ThreadRng) -> Result<FalconSignature, Error>,
 {
-    let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    if sig_written.is_null() {
-        return TAFRAH_STATUS_NULL_POINTER;
-    }
-    let sig_out = match unsafe { output_bytes_capacity(sig_out, sig_capacity) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-
-    let sk = FalconSigningKey::from_bytes(sk_bytes.to_vec());
-    let mut rng = rand::rng();
-    match sign(&sk, msg_bytes, &mut rng) {
-        Ok(sig) => {
-            if sig.as_bytes().len() > params.sig_max_bytes || sig.as_bytes().len() > sig_out.len() {
-                return TAFRAH_STATUS_INVALID_LENGTH;
-            }
-            let written = sig.as_bytes().len();
-            sig_out[..written].copy_from_slice(sig.as_bytes());
-            unsafe {
-                *sig_written = written;
-            }
-            TAFRAH_STATUS_OK
+    ffi_guard(move || {
+        // SAFETY: sk_ptr/sk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least sk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let sk_bytes = match unsafe { input_bytes_exact(sk_ptr, sk_len, params.sk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: msg_ptr/msg_len come from the FFI caller; per the documented C ABI the pointer is null (only when msg_len is 0) or points to a readable buffer of at least msg_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        if sig_written.is_null() {
+            return TAFRAH_STATUS_NULL_POINTER;
         }
-        Err(err) => status_from_error(err),
-    }
+        // SAFETY: sig_out/sig_capacity come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least sig_capacity bytes. output_bytes_capacity null-checks before forming the slice, which does not outlive this call.
+        let sig_out = match unsafe { output_bytes_capacity(sig_out, sig_capacity) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+
+        let sk = FalconSigningKey::from_bytes(sk_bytes.to_vec());
+        let mut rng = rand::rng();
+        match sign(&sk, msg_bytes, &mut rng) {
+            Ok(sig) => {
+                if sig.as_bytes().len() > params.sig_max_bytes || sig.as_bytes().len() > sig_out.len() {
+                    return TAFRAH_STATUS_INVALID_LENGTH;
+                }
+                let written = sig.as_bytes().len();
+                sig_out[..written].copy_from_slice(sig.as_bytes());
+                // SAFETY: sig_written was confirmed non-null above; per the documented C ABI it points to a writable, properly aligned `usize`. The single scalar write stays within that object.
+                unsafe {
+                    *sig_written = written;
+                }
+                TAFRAH_STATUS_OK
+            }
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn falcon_verify_inner<F>(
@@ -569,28 +648,33 @@ fn falcon_verify_inner<F>(
 where
     F: FnOnce(&FalconVerifyingKey, &[u8], &FalconSignature) -> Result<(), Error>,
 {
-    let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.pk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    if sig_len == 0 || sig_len > params.sig_max_bytes {
-        return TAFRAH_STATUS_INVALID_LENGTH;
-    }
-    let sig_bytes = match unsafe { input_bytes(sig_ptr, sig_len) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: vk_ptr/vk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least vk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let vk_bytes = match unsafe { input_bytes_exact(vk_ptr, vk_len, params.pk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: msg_ptr/msg_len come from the FFI caller; per the documented C ABI the pointer is null (only when msg_len is 0) or points to a readable buffer of at least msg_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let msg_bytes = match unsafe { input_bytes(msg_ptr, msg_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        if sig_len == 0 || sig_len > params.sig_max_bytes {
+            return TAFRAH_STATUS_INVALID_LENGTH;
+        }
+        // SAFETY: sig_ptr/sig_len come from the FFI caller; sig_len was bounds-checked above (non-zero, <= sig_max_bytes). Per the documented C ABI the pointer is null or points to a readable buffer of at least sig_len bytes. input_bytes null-checks before forming the slice, which does not outlive this call.
+        let sig_bytes = match unsafe { input_bytes(sig_ptr, sig_len) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let vk = FalconVerifyingKey::from_bytes(vk_bytes.to_vec());
-    let sig = FalconSignature::from_bytes(sig_bytes.to_vec());
-    match verify(&vk, msg_bytes, &sig) {
-        Ok(()) => TAFRAH_STATUS_OK,
-        Err(err) => status_from_error(err),
-    }
+        let vk = FalconVerifyingKey::from_bytes(vk_bytes.to_vec());
+        let sig = FalconSignature::from_bytes(sig_bytes.to_vec());
+        match verify(&vk, msg_bytes, &sig) {
+            Ok(()) => TAFRAH_STATUS_OK,
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 fn hqc_keygen_inner<F>(
@@ -604,24 +688,28 @@ fn hqc_keygen_inner<F>(
 where
     F: FnOnce(&mut ThreadRng) -> Result<(HqcEncapsulationKey, HqcDecapsulationKey), Error>,
 {
-    let ek_out = match unsafe { output_bytes_exact(ek_out, ek_len, params.pk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let dk_out = match unsafe { output_bytes_exact(dk_out, dk_len, params.sk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: ek_out/ek_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least ek_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ek_out = match unsafe { output_bytes_exact(ek_out, ek_len, params.pk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: dk_out/dk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least dk_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let dk_out = match unsafe { output_bytes_exact(dk_out, dk_len, params.sk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let mut rng = rand::rng();
-    match keygen(&mut rng) {
-        Ok((ek, dk)) => {
-            ek_out.copy_from_slice(ek.as_bytes());
-            dk_out.copy_from_slice(dk.as_bytes());
-            TAFRAH_STATUS_OK
+        let mut rng = rand::rng();
+        match keygen(&mut rng) {
+            Ok((ek, dk)) => {
+                ek_out.copy_from_slice(ek.as_bytes());
+                dk_out.copy_from_slice(dk.as_bytes());
+                TAFRAH_STATUS_OK
+            }
+            Err(err) => status_from_error(err),
         }
-        Err(err) => status_from_error(err),
-    }
+    })
 }
 
 fn hqc_encapsulate_inner<F>(
@@ -640,29 +728,34 @@ where
         &mut ThreadRng,
     ) -> Result<(HqcCiphertext, tafrah_hqc::types::SharedSecret), Error>,
 {
-    let ek_bytes = match unsafe { input_bytes_exact(ek_ptr, ek_len, params.pk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let ct_out = match unsafe { output_bytes_exact(ct_out, ct_len, params.ct_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let ss_out = match unsafe { output_bytes_exact(ss_out, ss_len, params.ss_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: ek_ptr/ek_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least ek_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ek_bytes = match unsafe { input_bytes_exact(ek_ptr, ek_len, params.pk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: ct_out/ct_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least ct_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ct_out = match unsafe { output_bytes_exact(ct_out, ct_len, params.ct_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: ss_out/ss_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least ss_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ss_out = match unsafe { output_bytes_exact(ss_out, ss_len, params.ss_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let ek = HqcEncapsulationKey::from_bytes(ek_bytes.to_vec());
-    let mut rng = rand::rng();
-    match encapsulate(&ek, &mut rng) {
-        Ok((ct, ss)) => {
-            ct_out.copy_from_slice(ct.as_bytes());
-            ss_out.copy_from_slice(ss.as_bytes());
-            TAFRAH_STATUS_OK
+        let ek = HqcEncapsulationKey::from_bytes(ek_bytes.to_vec());
+        let mut rng = rand::rng();
+        match encapsulate(&ek, &mut rng) {
+            Ok((ct, ss)) => {
+                ct_out.copy_from_slice(ct.as_bytes());
+                ss_out.copy_from_slice(ss.as_bytes());
+                TAFRAH_STATUS_OK
+            }
+            Err(err) => status_from_error(err),
         }
-        Err(err) => status_from_error(err),
-    }
+    })
 }
 
 fn hqc_decapsulate_inner<F>(
@@ -681,25 +774,30 @@ where
         &HqcCiphertext,
     ) -> Result<tafrah_hqc::types::SharedSecret, Error>,
 {
-    let dk_bytes = match unsafe { input_bytes_exact(dk_ptr, dk_len, params.sk_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let ct_bytes = match unsafe { input_bytes_exact(ct_ptr, ct_len, params.ct_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
-    let ss_out = match unsafe { output_bytes_exact(ss_out, ss_len, params.ss_bytes) } {
-        Ok(bytes) => bytes,
-        Err(status) => return status,
-    };
+    ffi_guard(move || {
+        // SAFETY: dk_ptr/dk_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least dk_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let dk_bytes = match unsafe { input_bytes_exact(dk_ptr, dk_len, params.sk_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: ct_ptr/ct_len come from the FFI caller; per the documented C ABI the pointer is null or points to a readable buffer of at least ct_len bytes. input_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ct_bytes = match unsafe { input_bytes_exact(ct_ptr, ct_len, params.ct_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
+        // SAFETY: ss_out/ss_len come from the FFI caller; per the documented C ABI the pointer is null or points to a writable buffer of at least ss_len bytes. output_bytes_exact null-checks and length-checks before forming the slice, which does not outlive this call.
+        let ss_out = match unsafe { output_bytes_exact(ss_out, ss_len, params.ss_bytes) } {
+            Ok(bytes) => bytes,
+            Err(status) => return status,
+        };
 
-    let dk = HqcDecapsulationKey::from_bytes(dk_bytes.to_vec());
-    let ct = HqcCiphertext::from_bytes(ct_bytes.to_vec());
-    match decapsulate(&dk, &ct) {
-        Ok(ss) => copy_result(ss.as_bytes(), ss_out),
-        Err(err) => status_from_error(err),
-    }
+        let dk = HqcDecapsulationKey::from_bytes(dk_bytes.to_vec());
+        let ct = HqcCiphertext::from_bytes(ct_bytes.to_vec());
+        match decapsulate(&dk, &ct) {
+            Ok(ss) => copy_result(ss.as_bytes(), ss_out),
+            Err(err) => status_from_error(err),
+        }
+    })
 }
 
 #[no_mangle]
@@ -1333,7 +1431,7 @@ pub extern "C" fn tafrah_falcon_512_sign(
         sig_capacity,
         sig_written,
         &FALCON_512,
-        |sk, msg, rng| tafrah_falcon::falcon_512::sign(sk, msg, rng),
+        tafrah_falcon::falcon_512::sign,
     )
 }
 
@@ -1354,7 +1452,7 @@ pub extern "C" fn tafrah_falcon_512_verify(
         sig_ptr,
         sig_len,
         &FALCON_512,
-        |vk, msg, sig| tafrah_falcon::falcon_512::verify(vk, msg, sig),
+        tafrah_falcon::falcon_512::verify,
     )
 }
 
@@ -1389,7 +1487,7 @@ pub extern "C" fn tafrah_falcon_1024_sign(
         sig_capacity,
         sig_written,
         &FALCON_1024,
-        |sk, msg, rng| tafrah_falcon::falcon_1024::sign(sk, msg, rng),
+        tafrah_falcon::falcon_1024::sign,
     )
 }
 
@@ -1410,7 +1508,7 @@ pub extern "C" fn tafrah_falcon_1024_verify(
         sig_ptr,
         sig_len,
         &FALCON_1024,
-        |vk, msg, sig| tafrah_falcon::falcon_1024::verify(vk, msg, sig),
+        tafrah_falcon::falcon_1024::verify,
     )
 }
 
@@ -1443,7 +1541,7 @@ pub extern "C" fn tafrah_hqc_128_encapsulate(
         ss_out,
         ss_len,
         &HQC_128,
-        |ek, rng| tafrah_hqc::hqc_128::encapsulate(ek, rng),
+        tafrah_hqc::hqc_128::encapsulate,
     )
 }
 
@@ -1464,7 +1562,7 @@ pub extern "C" fn tafrah_hqc_128_decapsulate(
         ss_out,
         ss_len,
         &HQC_128,
-        |dk, ct| tafrah_hqc::hqc_128::decapsulate(dk, ct),
+        tafrah_hqc::hqc_128::decapsulate,
     )
 }
 
@@ -1497,7 +1595,7 @@ pub extern "C" fn tafrah_hqc_192_encapsulate(
         ss_out,
         ss_len,
         &HQC_192,
-        |ek, rng| tafrah_hqc::hqc_192::encapsulate(ek, rng),
+        tafrah_hqc::hqc_192::encapsulate,
     )
 }
 
@@ -1518,7 +1616,7 @@ pub extern "C" fn tafrah_hqc_192_decapsulate(
         ss_out,
         ss_len,
         &HQC_192,
-        |dk, ct| tafrah_hqc::hqc_192::decapsulate(dk, ct),
+        tafrah_hqc::hqc_192::decapsulate,
     )
 }
 
@@ -1551,7 +1649,7 @@ pub extern "C" fn tafrah_hqc_256_encapsulate(
         ss_out,
         ss_len,
         &HQC_256,
-        |ek, rng| tafrah_hqc::hqc_256::encapsulate(ek, rng),
+        tafrah_hqc::hqc_256::encapsulate,
     )
 }
 
@@ -1572,6 +1670,6 @@ pub extern "C" fn tafrah_hqc_256_decapsulate(
         ss_out,
         ss_len,
         &HQC_256,
-        |dk, ct| tafrah_hqc::hqc_256::decapsulate(dk, ct),
+        tafrah_hqc::hqc_256::decapsulate,
     )
 }

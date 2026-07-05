@@ -295,7 +295,7 @@ fn zero_rnd() -> [u8; ML_DSA_RNDBYTES] {
     [0u8; ML_DSA_RNDBYTES]
 }
 
-fn random_rnd(rng: &mut (impl rand_core::CryptoRng + rand_core::Rng)) -> [u8; ML_DSA_RNDBYTES] {
+fn random_rnd(rng: &mut impl rand_core::CryptoRng) -> [u8; ML_DSA_RNDBYTES] {
     let mut rnd = [0u8; ML_DSA_RNDBYTES];
     rng.fill_bytes(&mut rnd);
     rnd
@@ -305,7 +305,7 @@ fn random_rnd(rng: &mut (impl rand_core::CryptoRng + rand_core::Rng)) -> [u8; ML
 pub fn ml_dsa_sign(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<Signature, Error> {
     ml_dsa_sign_with_context(sk, msg, &[], rng, params)
@@ -316,7 +316,7 @@ pub fn ml_dsa_sign_with_context(
     sk: &SigningKey,
     msg: &[u8],
     ctx: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<Signature, Error> {
     let (pre, prelen) = build_context_prefix(ctx)?;
@@ -361,7 +361,7 @@ pub fn ml_dsa_sign_internal(
 pub fn ml_dsa_sign_extmu(
     sk: &SigningKey,
     mu: &[u8; 64],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<Signature, Error> {
     let rnd = random_rnd(rng);
@@ -384,7 +384,7 @@ pub fn ml_dsa_sign_prehash(
     digest: &[u8],
     ctx: &[u8],
     hashalg: PreHashAlgorithm,
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<Signature, Error> {
     let rnd = random_rnd(rng);
@@ -421,7 +421,7 @@ pub fn ml_dsa_sign_prehash_shake256(
     sk: &SigningKey,
     msg: &[u8],
     ctx: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<Signature, Error> {
     let digest = shake256_prehash(msg);
@@ -443,7 +443,7 @@ pub fn ml_dsa_sign_prehash_shake256_deterministic(
 pub fn ml_dsa_sign_message(
     sk: &SigningKey,
     msg: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<SignedMessage, Error> {
     ml_dsa_sign_message_with_context(sk, msg, &[], rng, params)
@@ -454,7 +454,7 @@ pub fn ml_dsa_sign_message_with_context(
     sk: &SigningKey,
     msg: &[u8],
     ctx: &[u8],
-    rng: &mut (impl rand_core::CryptoRng + rand_core::Rng),
+    rng: &mut impl rand_core::CryptoRng,
     params: &Params,
 ) -> Result<SignedMessage, Error> {
     let sig = ml_dsa_sign_with_context(sk, msg, ctx, rng, params)?;

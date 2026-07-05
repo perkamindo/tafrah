@@ -1,6 +1,6 @@
 use tafrah_ml_dsa::keygen;
 use tafrah_ml_dsa::ml_dsa_44;
-use tafrah_ml_dsa::params::{Params, ML_DSA_44};
+use tafrah_ml_dsa::params::ML_DSA_44;
 use tafrah_ml_dsa::sign;
 use tafrah_ml_dsa::types::{Signature, VerifyingKey};
 use tafrah_ml_dsa::verify;
@@ -49,10 +49,10 @@ fn test_ml_dsa_context_is_bounded_to_one_byte() {
 fn test_ml_dsa_generic_api_rejects_invalid_params() {
     let mut rng = rand::rng();
     let msg = b"invalid params";
-    let invalid = Params {
-        gamma2: 12345,
-        ..ML_DSA_44
-    };
+    // `Params` is `#[non_exhaustive]`, so build the malformed bundle by cloning a
+    // valid one and mutating a field (field writes stay legal; literal/`..` do not).
+    let mut invalid = ML_DSA_44;
+    invalid.gamma2 = 12345;
 
     assert!(matches!(
         keygen::ml_dsa_keygen(&mut rng, &invalid),
