@@ -50,7 +50,7 @@ pub const TAFRAH_STATUS_VERIFICATION_FAILED: c_int = 4;
 pub const TAFRAH_STATUS_INTERNAL_ERROR: c_int = 5;
 pub const TAFRAH_STATUS_NOT_IMPLEMENTED: c_int = 6;
 
-const VERSION: &[u8] = b"tafrah-abi/0.1.8\0";
+const VERSION: &[u8] = concat!("tafrah-abi/", env!("CARGO_PKG_VERSION"), "\0").as_bytes();
 const STATUS_OK: &[u8] = b"ok\0";
 const STATUS_NULL_POINTER: &[u8] = b"null pointer\0";
 const STATUS_INVALID_LENGTH: &[u8] = b"invalid length\0";

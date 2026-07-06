@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 readme.workspace = true
+categories.workspace = true
 
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]

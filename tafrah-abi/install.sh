@@ -39,9 +39,10 @@ cp "$SCRIPT_DIR/../target/release/$LIB_NAME" "$PREFIX/lib/$LIB_NAME"
 cp "$SCRIPT_DIR/../target/release/$STATIC_LIB_NAME" "$PREFIX/lib/$STATIC_LIB_NAME"
 cp "$SCRIPT_DIR/../target/release/$LIB_NAME" "$PREFIX/lib/$LEGACY_LIB_NAME"
 
+VERSION="$(sed -n 's/^version = "\([^"]*\)".*/\1/p' "$SCRIPT_DIR/Cargo.toml" | head -1)"
 sed \
   -e "s#@PREFIX@#$PREFIX#g" \
-  -e "s#@VERSION@#0.1.7#g" \
+  -e "s#@VERSION@#$VERSION#g" \
   "$SCRIPT_DIR/pkgconfig/tafrah.pc.in" > "$PREFIX/lib/pkgconfig/tafrah.pc"
 
 printf 'Installed tafrah-abi to %s\n' "$PREFIX"

@@ -8,7 +8,7 @@ Add the umbrella crate with the features you need:
 
 ```toml
 [dependencies]
-tafrah = { version = "0.1", features = ["std", "ml-kem", "ml-dsa", "slh-dsa", "falcon", "hqc"] }
+tafrah = { version = "0.2", features = ["std", "ml-kem", "ml-dsa", "slh-dsa", "falcon", "hqc"] }
 ```
 
 ## Example

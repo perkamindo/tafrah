@@ -21,6 +21,7 @@ license = "MIT"
 repository = "https://github.com/perkamindo/tafrah"
 homepage = "https://github.com/perkamindo/tafrah"
 readme = "README.md"
+categories = ["cryptography"]
 
 [workspace.dependencies]
 rand = { version = "0.10", default-features = true }
