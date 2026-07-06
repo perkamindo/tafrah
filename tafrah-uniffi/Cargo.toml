@@ -1,6 +1,6 @@
 [package]
 name = "tafrah-uniffi"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "UniFFI host bindings for Tafrah PQC primitives"
 authors.workspace = true
@@ -21,4 +21,4 @@ tafrah-ml-dsa = { workspace = true, features = ["std"] }
 tafrah-ml-kem = { workspace = true, features = ["std"] }
 tafrah-slh-dsa = { workspace = true, features = ["std"] }
 tafrah-traits = { workspace = true, features = ["std"] }
-uniffi = "0.31"
+uniffi = "0.32"

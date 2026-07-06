@@ -4,6 +4,34 @@ All notable changes to Tafrah are documented in this file.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-06
+
+Maintenance release. No cryptographic or public-API changes; the constant-time
+guarantees of 0.2.0 are unchanged (full workspace release regression stays
+byte-exact against the reference KATs).
+
+### Changed
+
+- Bumped `uniffi` from 0.31 to 0.32 (host bindings and `uniffi-bindgen`);
+  Python/Kotlin/Swift binding generation verified.
+- The `tafrah-abi` and `tafrah-uniffi` runtime version strings are now derived
+  from `CARGO_PKG_VERSION` instead of being hardcoded, so they can no longer
+  drift from the crate version (they were stale at 0.1.8 / 0.1.7 in 0.2.0).
+- `tafrah-abi/install.sh` reads the version from `Cargo.toml` when generating
+  the pkg-config file instead of a hardcoded value.
+- Updated the umbrella-crate docs and `docs/rust-usage.md` install snippets to
+  `0.2`.
+
+### Added
+
+- `categories = ["cryptography"]` on all published crates for crates.io
+  discoverability.
+
+### Fixed
+
+- Regenerated the `auth-demo` Rust example lockfile so it resolves the current
+  workspace crate versions.
+
 ## [0.2.0] - 2026-07-05
 
 Security-focused release that hardens the secret-dependent code paths across the
